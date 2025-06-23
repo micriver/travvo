@@ -75,7 +75,7 @@ class DealDetectionService {
   /**
    * Detect potential error fares (pricing mistakes)
    */
-  private detectErrorFares(homeAirport: string, maxBudget?: number): Deal[] {
+  private detectErrorFares(_homeAirport: string, maxBudget?: number): Deal[] {
     // Mock error fares - these would be detected by monitoring airline pricing APIs
     const errorFares: Deal[] = [
       {
@@ -104,7 +104,7 @@ class DealDetectionService {
   /**
    * Detect recent price drops on popular routes
    */
-  private detectPriceDrops(homeAirport: string, userProfile: UserProfile): Deal[] {
+  private detectPriceDrops(_homeAirport: string, _userProfile: UserProfile): Deal[] {
     // Mock price drop detection
     return [
       {
@@ -128,7 +128,7 @@ class DealDetectionService {
   /**
    * Find last-minute deals (departing within 2 weeks)
    */
-  private detectLastMinuteDeals(homeAirport: string, maxBudget?: number): Deal[] {
+  private detectLastMinuteDeals(_homeAirport: string, _maxBudget?: number): Deal[] {
     const twoWeeksFromNow = new Date();
     twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
@@ -153,7 +153,7 @@ class DealDetectionService {
   /**
    * Find better deals by comparing across airlines
    */
-  private detectCrossAirlineDeals(homeAirport: string, preferredCabin?: string): Deal[] {
+  private detectCrossAirlineDeals(_homeAirport: string, _preferredCabin?: string): Deal[] {
     return [
       {
         id: 'cross_1',
@@ -177,8 +177,8 @@ class DealDetectionService {
    * Predict if flight prices will go up or down
    */
   async predictPrices(
-    origin: string, 
-    destination: string, 
+    _origin: string, 
+    _destination: string, 
     departureDate: Date
   ): Promise<PricePrediction> {
     // Mock price prediction - in real app this would use ML models
@@ -212,8 +212,8 @@ class DealDetectionService {
    * Suggest cheaper dates near the user's preferred date
    */
   async suggestFlexibleDates(
-    origin: string,
-    destination: string,
+    _origin: string,
+    _destination: string,
     preferredDate: Date,
     flexibilityDays: number = 3
   ): Promise<FlexibleDateSuggestion[]> {
@@ -274,7 +274,7 @@ class DealDetectionService {
   async monitorRoute(
     origin: string,
     destination: string,
-    userProfile: UserProfile
+    _userProfile: UserProfile
   ): Promise<void> {
     // In real app, this would set up monitoring for price changes
     console.log(`Monitoring ${origin} → ${destination} for deals`);

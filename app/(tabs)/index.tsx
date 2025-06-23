@@ -478,22 +478,35 @@ export default function TravelScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with Discovery Toggle */}
+      {/* Header with Discovery Toggle and Settings */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
           {isDiscoveryMode ? 'Discover Deals' : 'Where would you like to go?'}
         </Text>
-        <TouchableOpacity 
-          style={styles.discoveryButton} 
-          onPress={handleDiscoveryToggle}
-          activeOpacity={0.8}
-        >
-          <IconSymbol 
-            name={isDiscoveryMode ? "magnifyingglass" : "safari"} 
-            size={24} 
-            color={isDiscoveryMode ? DesignSystem.colors.textSecondary : DesignSystem.colors.primary} 
-          />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.discoveryButton} 
+            onPress={handleDiscoveryToggle}
+            activeOpacity={0.8}
+          >
+            <IconSymbol 
+              name={isDiscoveryMode ? "magnifyingglass" : "safari"} 
+              size={24} 
+              color={isDiscoveryMode ? DesignSystem.colors.textSecondary : DesignSystem.colors.primary} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.settingsButton} 
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.8}
+          >
+            <IconSymbol 
+              name="gear" 
+              size={22} 
+              color={DesignSystem.colors.textSecondary} 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Main Content Area */}
@@ -840,7 +853,16 @@ const styles = StyleSheet.create({
     color: DesignSystem.colors.textPrimary,
     flex: 1,
   },
+  headerActions: {
+    flexDirection: 'row',
+    gap: DesignSystem.spacing.sm,
+  },
   discoveryButton: {
+    padding: DesignSystem.spacing.sm,
+    backgroundColor: DesignSystem.colors.card,
+    borderRadius: DesignSystem.borderRadius.medium,
+  },
+  settingsButton: {
     padding: DesignSystem.spacing.sm,
     backgroundColor: DesignSystem.colors.card,
     borderRadius: DesignSystem.borderRadius.medium,
@@ -852,7 +874,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   discoveryScrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
   onboardingBanner: {
     flexDirection: 'row',

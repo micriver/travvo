@@ -18,13 +18,9 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            borderTopColor: 'rgba(255, 255, 255, 0.1)',
-          },
-          default: {},
-        }),
+        tabBarStyle: {
+          display: 'none', // Hide tab bar completely
+        },
       }}>
       <Tabs.Screen
         name="index"

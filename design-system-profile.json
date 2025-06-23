@@ -1,0 +1,127 @@
+{
+  "designSystem": {
+    "brand": {
+      "name": "Travvo",
+      "typography": {
+        "fontFamily": "System",
+        "heading": {
+          "fontSize": 32,
+          "fontWeight": "700",
+          "lineHeight": 40
+        },
+        "subheading": {
+          "fontSize": 20,
+          "fontWeight": "600",
+          "lineHeight": 28
+        },
+        "body": {
+          "fontSize": 16,
+          "fontWeight": "400",
+          "lineHeight": 24
+        },
+        "label": {
+          "fontSize": 14,
+          "fontWeight": "500",
+          "letterSpacing": 0.5
+        }
+      },
+      "colors": {
+        "primary": "#FF6A3D", // Coral orange
+        "accent": "#00B9AE", // Teal option
+        "background": "#0D0D0D", // Dark background
+        "surface": "#1A1A1A", // Card/overlay background
+        "textPrimary": "#FFFFFF",
+        "textSecondary": "#AAAAAA",
+        "inputBackground": "#262626",
+        "border": "#333333"
+      },
+      "elevation": {
+        "low": 2,
+        "medium": 6,
+        "high": 12
+      },
+      "radius": {
+        "none": 0,
+        "sm": 4,
+        "md": 8,
+        "lg": 16,
+        "xl": 24,
+        "full": 1000
+      },
+      "spacing": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24,
+        "xl": 32,
+        "xxl": 40
+      },
+      "icons": {
+        "search": "Feather.Search",
+        "plane": "MaterialCommunityIcons.airplane",
+        "pin": "FontAwesome.map-marker",
+        "microphone": "Feather.Mic"
+      },
+      "animations": {
+        "loading": "lottie/loading-spinner.json",
+        "voiceInput": "lottie/voice-waveform.json",
+        "screenTransition": "ease-in-out"
+      },
+      "imagery": {
+        "style": "Isometric, 3D-rendered, soft shadows, tilt-shift feel",
+        "theme": "Transport (plane, train, ferry, city), embedded in cutaway land/ocean tiles",
+        "orientation": "centered, square ratio, UI-safe padding"
+      }
+    },
+    "components": {
+      "Button": {
+        "variants": {
+          "primary": {
+            "bgColor": "#FF6A3D",
+            "textColor": "#FFFFFF",
+            "padding": 16,
+            "borderRadius": 12
+          },
+          "ghost": {
+            "bgColor": "transparent",
+            "textColor": "#FF6A3D",
+            "borderColor": "#FF6A3D",
+            "borderWidth": 1,
+            "padding": 16
+          }
+        }
+      },
+      "Input": {
+        "backgroundColor": "#262626",
+        "borderRadius": 12,
+        "padding": 14,
+        "textColor": "#FFFFFF",
+        "placeholderColor": "#888888",
+        "iconColor": "#FF6A3D"
+      },
+      "Card": {
+        "backgroundColor": "#1A1A1A",
+        "borderRadius": 16,
+        "padding": 20,
+        "shadow": "medium"
+      },
+      "Screen": {
+        "paddingHorizontal": 24,
+        "paddingVertical": 32,
+        "backgroundColor": "#0D0D0D"
+      },
+      "SearchBar": {
+        "icon": "search",
+        "inputStyle": "rounded",
+        "backgroundColor": "#1F1F1F",
+        "textColor": "#FFFFFF",
+        "height": 48
+      },
+      "VoiceInput": {
+        "micButtonSize": 64,
+        "animationFile": "lottie/voice-waveform.json",
+        "backgroundColor": "#FF6A3D"
+      }
+    }
+  }
+}

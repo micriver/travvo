@@ -1,0 +1,49 @@
+# Exclude planning and conversation files
+MASTER_PLAN.md
+travvo_design_brief_summary.md
+CONVERSATION_HISTORY.md
+
+# Image references and assets
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.ico
+assets/images/
+assets/references/
+public/images/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Runtime data
+*.pid
+*.seed
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+MASTER_PLAN.md

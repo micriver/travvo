@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, View, Text, Animated, TextInput, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Text, Animated, TextInput, Alert, ScrollView, ImageBackground, Dimensions } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import LottieView from 'lottie-react-native';
@@ -8,6 +8,9 @@ import { DesignSystem } from '@/constants/DesignSystem';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { FlightSearchParams } from '@/types';
 import { aiSearchService, DestinationSuggestion } from '@/services/ai/aiSearchService';
+import { dealDetectionService } from '@/services/deals/dealDetectionService';
+
+const { width } = Dimensions.get('window');
 
 // Animated AI Dot Component
 function AnimatedAIDot({ isListening }: { isListening: boolean }) {
@@ -89,6 +92,65 @@ function AnimatedAIDot({ isListening }: { isListening: boolean }) {
   );
 }
 
+// Discovery Deal Card Component
+interface DealCard {
+  id: string;
+  title: string;
+  destination: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  image: string;
+  departureDate: string;
+  returnDate?: string;
+  airportCode: string;
+  reason: string;
+  dealType: 'flexible_date' | 'budget_match' | 'cabin_upgrade' | 'last_minute' | 'popular';
+}
+
+function DiscoveryDealCard({ deal, onPress }: { deal: DealCard; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.dealCard} onPress={onPress} activeOpacity={0.9}>
+      <ImageBackground
+        source={{ uri: deal.image }}
+        style={styles.dealImage}
+        imageStyle={styles.dealImageStyle}
+      >
+        <View style={styles.dealOverlay}>
+          {deal.discount && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>{deal.discount}% OFF</Text>
+            </View>
+          )}
+          
+          <View style={styles.dealContent}>
+            <View style={styles.dealHeader}>
+              <Text style={styles.dealDestination}>{deal.destination}</Text>
+              <Text style={styles.dealTitle}>{deal.title}</Text>
+            </View>
+            
+            <View style={styles.dealFooter}>
+              <View style={styles.dealDates}>
+                <Text style={styles.dealDate}>{deal.departureDate}</Text>
+                {deal.returnDate && (
+                  <Text style={styles.dealDate}> - {deal.returnDate}</Text>
+                )}
+              </View>
+              
+              <View style={styles.dealPricing}>
+                {deal.originalPrice && (
+                  <Text style={styles.originalPrice}>${deal.originalPrice}</Text>
+                )}
+                <Text style={styles.dealPrice}>${deal.price}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </ImageBackground>
+    </TouchableOpacity>
+  );
+}
+
 export default function TravelScreen() {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -97,10 +159,95 @@ export default function TravelScreen() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<DestinationSuggestion[]>([]);
   const [clarificationQuestion, setClarificationQuestion] = useState<string>('');
+  const [isDiscoveryMode, setIsDiscoveryMode] = useState(false);
+  const [discoveryDeals, setDiscoveryDeals] = useState<DealCard[]>([]);
   const { state } = useUserPreferences();
 
   const handleVoicePress = () => {
     setIsListening(!isListening);
+  };
+
+  const loadDiscoveryDeals = async () => {
+    if (!state.profile) {
+      // Show generic deals for users without onboarding
+      setDiscoveryDeals([
+        {
+          id: 'generic1',
+          title: 'Weekend Getaway',
+          destination: 'Las Vegas',
+          price: 189,
+          originalPrice: 280,
+          discount: 32,
+          image: 'https://images.unsplash.com/photo-1605833273317-4feaaa6af21c?w=400',
+          departureDate: 'Dec 14',
+          returnDate: 'Dec 16',
+          airportCode: 'LAS',
+          reason: 'Popular weekend destination',
+          dealType: 'popular'
+        },
+        {
+          id: 'generic2',
+          title: 'City Break',
+          destination: 'San Francisco',
+          price: 245,
+          image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400',
+          departureDate: 'Dec 20',
+          returnDate: 'Dec 27',
+          airportCode: 'SFO',
+          reason: 'Great for exploring',
+          dealType: 'popular'
+        }
+      ]);
+      return;
+    }
+
+    try {
+      const deals = await dealDetectionService.findPersonalizedDeals(state.profile);
+      const formattedDeals: DealCard[] = deals.map(deal => ({
+        id: deal.id,
+        title: deal.description,
+        destination: deal.destination,
+        price: deal.price,
+        originalPrice: deal.originalPrice,
+        discount: deal.discount,
+        image: `https://images.unsplash.com/400x300/?sig=${deal.id}`,
+        departureDate: new Date(deal.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        returnDate: deal.returnDate ? new Date(deal.returnDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : undefined,
+        airportCode: deal.airportCode,
+        reason: deal.description,
+        dealType: deal.dealType as any
+      }));
+      setDiscoveryDeals(formattedDeals);
+    } catch (error) {
+      console.error('Failed to load discovery deals:', error);
+    }
+  };
+
+  const handleDiscoveryToggle = () => {
+    const newMode = !isDiscoveryMode;
+    setIsDiscoveryMode(newMode);
+    if (newMode && discoveryDeals.length === 0) {
+      loadDiscoveryDeals();
+    }
+  };
+
+  const handleDealPress = (deal: DealCard) => {
+    router.push({
+      pathname: '/search-results',
+      params: {
+        searchParams: JSON.stringify({
+          origin: state.profile?.travelPreferences?.homeAirport || 'PHX',
+          destination: deal.airportCode,
+          departureDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          passengers: { adults: 1, children: 0, infants: 0 },
+          cabin: 'economy',
+          maxStops: 2,
+          sortBy: 'price',
+          sortOrder: 'asc',
+        }),
+        searchQuery: deal.destination,
+      },
+    });
   };
 
   const handleSearchWithDefaultAirport = async (selectedDestination?: DestinationSuggestion) => {
@@ -331,73 +478,138 @@ export default function TravelScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Main Interaction Area */}
-      <View style={styles.interactionArea}>
-        {isVoiceMode ? (
-          <View style={styles.voiceInterface}>
-            <TouchableOpacity 
-              style={styles.voiceButton} 
-              onPress={handleVoicePress}
-              activeOpacity={0.8}
-            >
-              <AnimatedAIDot isListening={isListening} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.typeInterface}>
-            <View style={styles.searchBox}>
-              <IconSymbol name="magnifyingglass" size={20} color={DesignSystem.colors.inactive} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Where would you like to go?"
-                placeholderTextColor={DesignSystem.colors.textSecondary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={handleSearch} disabled={isSearching}>
-                  <IconSymbol 
-                    name={isSearching ? "hourglass" : "arrow.right"} 
-                    size={20} 
-                    color={DesignSystem.colors.primary} 
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-            {state.profile?.travelPreferences.homeAirport && (
-              <Text style={styles.homeAirportText}>
-                From {state.profile.travelPreferences.homeAirport}
+      {/* Header with Discovery Toggle */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>
+          {isDiscoveryMode ? 'Discover Deals' : 'Where would you like to go?'}
+        </Text>
+        <TouchableOpacity 
+          style={styles.discoveryButton} 
+          onPress={handleDiscoveryToggle}
+          activeOpacity={0.8}
+        >
+          <IconSymbol 
+            name={isDiscoveryMode ? "magnifyingglass" : "safari"} 
+            size={24} 
+            color={isDiscoveryMode ? DesignSystem.colors.textSecondary : DesignSystem.colors.primary} 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Main Content Area */}
+      <View style={styles.contentArea}>
+        {isDiscoveryMode ? (
+          /* Discovery Mode */
+          <ScrollView 
+            style={styles.discoveryContent}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.discoveryScrollContent}
+          >
+            {!state.profile && (
+              <TouchableOpacity 
+                style={styles.onboardingBanner}
+                onPress={() => router.push('/onboarding/splash')}
+                activeOpacity={0.8}
+              >
+                <IconSymbol name="wand.and.stars" size={20} color={DesignSystem.colors.primary} />
+                <Text style={styles.onboardingText}>
+                  Complete setup for personalized deals
+                </Text>
+                <IconSymbol name="chevron.right" size={16} color={DesignSystem.colors.primary} />
+              </TouchableOpacity>
+            )}
+            
+            <View style={styles.dealsSection}>
+              <Text style={styles.dealsSectionTitle}>
+                {state.profile ? '🔥 Hot Deals for You' : '✈️ Popular Destinations'}
               </Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.dealsContainer}
+              >
+                {discoveryDeals.map((deal) => (
+                  <DiscoveryDealCard 
+                    key={deal.id} 
+                    deal={deal} 
+                    onPress={() => handleDealPress(deal)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          </ScrollView>
+        ) : (
+          /* Search Mode */
+          <View style={styles.interactionArea}>
+            {isVoiceMode ? (
+              <View style={styles.voiceInterface}>
+                <TouchableOpacity 
+                  style={styles.voiceButton} 
+                  onPress={handleVoicePress}
+                  activeOpacity={0.8}
+                >
+                  <AnimatedAIDot isListening={isListening} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.typeInterface}>
+                <View style={styles.searchBox}>
+                  <IconSymbol name="magnifyingglass" size={20} color={DesignSystem.colors.inactive} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Where would you like to go?"
+                    placeholderTextColor={DesignSystem.colors.textSecondary}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    onSubmitEditing={handleSearch}
+                    returnKeyType="search"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={handleSearch} disabled={isSearching}>
+                      <IconSymbol 
+                        name={isSearching ? "hourglass" : "arrow.right"} 
+                        size={20} 
+                        color={DesignSystem.colors.primary} 
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {state.profile?.travelPreferences.homeAirport && (
+                  <Text style={styles.homeAirportText}>
+                    From {state.profile.travelPreferences.homeAirport}
+                  </Text>
+                )}
+              </View>
             )}
           </View>
         )}
       </View>
       
-      {/* AI Suggestions */}
-      {renderSuggestions()}
+      {/* AI Suggestions (only in search mode) */}
+      {!isDiscoveryMode && renderSuggestions()}
 
-      {/* Mode Switch Button - Fixed Position */}
-      <TouchableOpacity 
-        style={styles.modeSwitchButton} 
-        onPress={() => setIsVoiceMode(!isVoiceMode)}
-        activeOpacity={0.7}
-      >
-        {isVoiceMode ? (
-          <IconSymbol name="keyboard" size={24} color={DesignSystem.colors.textSecondary} />
-        ) : (
-          <LottieView
-            source={require('@/assets/animations/audio-wave.json')}
-            style={styles.lottieAnimation}
-            autoPlay={true}
-            loop={true}
-            speed={1}
-          />
-        )}
-      </TouchableOpacity>
+      {/* Mode Switch Button - Fixed Position (only in search mode) */}
+      {!isDiscoveryMode && (
+        <TouchableOpacity 
+          style={styles.modeSwitchButton} 
+          onPress={() => setIsVoiceMode(!isVoiceMode)}
+          activeOpacity={0.7}
+        >
+          {isVoiceMode ? (
+            <IconSymbol name="keyboard" size={24} color={DesignSystem.colors.textSecondary} />
+          ) : (
+            <LottieView
+              source={require('@/assets/animations/audio-wave.json')}
+              style={styles.lottieAnimation}
+              autoPlay={true}
+              loop={true}
+              speed={1}
+            />
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -612,5 +824,135 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: DesignSystem.colors.textSecondary,
     textAlign: 'center',
+  },
+  // Discovery Mode Styles
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: DesignSystem.spacing.xl,
+    paddingTop: 60,
+    paddingBottom: DesignSystem.spacing.lg,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: DesignSystem.colors.textPrimary,
+    flex: 1,
+  },
+  discoveryButton: {
+    padding: DesignSystem.spacing.sm,
+    backgroundColor: DesignSystem.colors.card,
+    borderRadius: DesignSystem.borderRadius.medium,
+  },
+  contentArea: {
+    flex: 1,
+  },
+  discoveryContent: {
+    flex: 1,
+  },
+  discoveryScrollContent: {
+    paddingBottom: 100,
+  },
+  onboardingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: DesignSystem.colors.primaryBackground,
+    marginHorizontal: DesignSystem.spacing.xl,
+    marginBottom: DesignSystem.spacing.xl,
+    padding: DesignSystem.spacing.lg,
+    borderRadius: DesignSystem.borderRadius.medium,
+    gap: DesignSystem.spacing.sm,
+  },
+  onboardingText: {
+    flex: 1,
+    fontSize: 15,
+    color: DesignSystem.colors.primary,
+    fontWeight: '500',
+  },
+  dealsSection: {
+    marginBottom: DesignSystem.spacing.xl,
+  },
+  dealsSectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: DesignSystem.colors.textPrimary,
+    marginLeft: DesignSystem.spacing.xl,
+    marginBottom: DesignSystem.spacing.lg,
+  },
+  dealsContainer: {
+    paddingLeft: DesignSystem.spacing.xl,
+    gap: DesignSystem.spacing.md,
+  },
+  dealCard: {
+    width: width * 0.7,
+    height: 200,
+    marginRight: DesignSystem.spacing.md,
+  },
+  dealImage: {
+    flex: 1,
+    borderRadius: DesignSystem.borderRadius.medium,
+    overflow: 'hidden',
+  },
+  dealImageStyle: {
+    borderRadius: DesignSystem.borderRadius.medium,
+  },
+  dealOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    padding: DesignSystem.spacing.lg,
+    justifyContent: 'space-between',
+  },
+  discountBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: DesignSystem.colors.primary,
+    paddingHorizontal: DesignSystem.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: DesignSystem.borderRadius.small,
+  },
+  discountText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dealContent: {
+    gap: DesignSystem.spacing.md,
+  },
+  dealHeader: {
+    gap: 4,
+  },
+  dealDestination: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+  },
+  dealTitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  dealFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  dealDates: {
+    flexDirection: 'row',
+  },
+  dealDate: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  dealPricing: {
+    alignItems: 'flex-end',
+  },
+  originalPrice: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textDecorationLine: 'line-through',
+  },
+  dealPrice: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
   },
 });

@@ -140,6 +140,62 @@ export const MAJOR_AIRPORTS: Airport[] = [
     city: 'Boston',
     country: 'United States',
     timezone: 'America/New_York',
+  },
+  {
+    code: 'SAN',
+    name: 'San Diego International Airport',
+    city: 'San Diego',
+    country: 'United States',
+    timezone: 'America/Los_Angeles',
+  },
+  {
+    code: 'PHX',
+    name: 'Phoenix Sky Harbor International Airport',
+    city: 'Phoenix',
+    country: 'United States',
+    timezone: 'America/Phoenix',
+  },
+  {
+    code: 'ANC',
+    name: 'Ted Stevens Anchorage International Airport',
+    city: 'Anchorage',
+    country: 'United States',
+    timezone: 'America/Anchorage',
+  },
+  {
+    code: 'MSP',
+    name: 'Minneapolis-St. Paul International Airport',
+    city: 'Minneapolis',
+    country: 'United States',
+    timezone: 'America/Chicago',
+  },
+  {
+    code: 'FCO',
+    name: 'Leonardo da Vinci International Airport',
+    city: 'Rome',
+    country: 'Italy',
+    timezone: 'Europe/Rome',
+  },
+  {
+    code: 'KEF',
+    name: 'Keflavik International Airport',
+    city: 'Reykjavik',
+    country: 'Iceland',
+    timezone: 'Atlantic/Reykjavik',
+  },
+  {
+    code: 'CAI',
+    name: 'Cairo International Airport',
+    city: 'Cairo',
+    country: 'Egypt',
+    timezone: 'Africa/Cairo',
+  },
+  {
+    code: 'MUC',
+    name: 'Munich Airport',
+    city: 'Munich',
+    country: 'Germany',
+    timezone: 'Europe/Berlin',
   }
 ];
 

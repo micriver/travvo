@@ -41,8 +41,29 @@ class FlightService {
     departureTime: Date,
     isReturn = false
   ): FlightSegment {
-    const originAirport = getAirportByCode(origin)!;
-    const destinationAirport = getAirportByCode(destination)!;
+    let originAirport = getAirportByCode(origin);
+    let destinationAirport = getAirportByCode(destination);
+    
+    // Create fallback airports if not found in mock data
+    if (!originAirport) {
+      originAirport = {
+        code: origin,
+        name: `${origin} Airport`,
+        city: origin,
+        country: 'Unknown',
+        timezone: 'UTC',
+      };
+    }
+    
+    if (!destinationAirport) {
+      destinationAirport = {
+        code: destination,
+        name: `${destination} Airport`,
+        city: destination,
+        country: 'Unknown',
+        timezone: 'UTC',
+      };
+    }
     const airline = getRandomAirline();
     const aircraft = getRandomAircraft();
     const distance = this.calculateDistance(origin, destination);

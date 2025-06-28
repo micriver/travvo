@@ -5,28 +5,27 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Alert,
   StatusBar,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { router } from 'expo-router';
 import { Stack } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { DesignSystem } from '@/constants/DesignSystem';
-import { flightService } from '@/services/api/flightService';
-import { Flight, FlightSearchParams, FlightSearchResult, BookingRequest } from '@/types';
-import { FlightResultsList } from '@/components/search';
+import { dealDetectionService } from '@/services/deals/dealDetectionService';
+import { Flight, BookingRequest } from '@/types';
+import { FlightCardCarousel } from '@/components/tiktok-flights';
 import { FlightDetailsModal } from '@/components/booking/FlightDetailsModal';
 import { BookingOptionsCard } from '@/components/booking/BookingOptionsCard';
 import { VoiceBookingInterface } from '@/components/booking/VoiceBookingInterface';
 import { ManualBookingForm } from '@/components/booking/ManualBookingForm';
 import { priceTrackingService } from '@/services/booking/PriceTrackingService';
 import { bookingHandoffService } from '@/services/booking/BookingHandoffService';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 
-
-export default function SearchResultsScreen() {
-  const params = useLocalSearchParams();
-  const [searchResults, setSearchResults] = useState<FlightSearchResult | null>(null);
+export default function DiscoveryScreen() {
+  const [discoveryFlights, setDiscoveryFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -37,27 +36,149 @@ export default function SearchResultsScreen() {
   const [showVoiceBooking, setShowVoiceBooking] = useState(false);
   const [showManualBooking, setShowManualBooking] = useState(false);
 
-  const searchParams: FlightSearchParams = JSON.parse(params.searchParams as string);
-  const searchQuery = params.searchQuery as string;
+  const { state } = useUserPreferences();
 
-  useEffect(() => {
-    performSearch();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const performSearch = async () => {
+  const loadDiscoveryFlights = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const results = await flightService.searchFlights(searchParams);
-      setSearchResults(results);
+      // Load curated deals based on user profile
+      let deals = [];
+      
+      if (state.profile) {
+        deals = await dealDetectionService.findPersonalizedDeals(state.profile);
+      } else {
+        // Generic popular destinations for users without profiles
+        deals = [
+          {
+            id: 'discovery1',
+            destination: 'Tokyo',
+            airportCode: 'NRT',
+            price: 650,
+            originalPrice: 850,
+            discount: 24,
+            departureDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+            returnDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString(),
+            description: 'Direct flights to Japan',
+            dealType: 'international'
+          },
+          {
+            id: 'discovery2',
+            destination: 'London',
+            airportCode: 'LHR',
+            price: 420,
+            originalPrice: 580,
+            discount: 28,
+            departureDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            returnDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+            description: 'European getaway',
+            dealType: 'international'
+          },
+          {
+            id: 'discovery3',
+            destination: 'Bali',
+            airportCode: 'DPS',
+            price: 780,
+            originalPrice: 1200,
+            discount: 35,
+            departureDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            returnDate: new Date(Date.now() + 37 * 24 * 60 * 60 * 1000).toISOString(),
+            description: 'Tropical paradise',
+            dealType: 'international'
+          }
+        ];
+      }
+
+      // Convert deals to Flight objects for the TikTok interface
+      const flights: Flight[] = deals.map((deal, index) => ({
+        id: deal.id,
+        airline: 'Premium Airlines',
+        flightNumber: `PA${1000 + index}`,
+        aircraft: 'Boeing 787',
+        price: {
+          total: deal.price,
+          currency: 'USD',
+          breakdown: {
+            base: Math.round(deal.price * 0.75),
+            taxes: Math.round(deal.price * 0.15),
+            fees: Math.round(deal.price * 0.10)
+          }
+        },
+        cabin: 'economy',
+        availability: {
+          seatsLeft: Math.floor(Math.random() * 50) + 10,
+          lastUpdated: new Date()
+        },
+        baggage: {
+          carry_on: {
+            included: true,
+            weight: 10,
+            dimensions: '56x45x25'
+          },
+          checked: {
+            included: false,
+            weight: 23,
+            fee: 50
+          }
+        },
+        amenities: ['WiFi', 'Entertainment', 'Meals'],
+        bookingClass: 'M',
+        refundable: false,
+        changeable: true,
+        stops: 0,
+        totalDuration: 480 + Math.random() * 240,
+        segments: [
+          {
+            id: `${deal.id}-segment`,
+            flightNumber: `PA${1000 + index}`,
+            airline: {
+              code: 'PA',
+              name: 'Premium Airlines',
+              logo: undefined
+            },
+            aircraft: {
+              model: 'Boeing 787-9',
+              manufacturer: 'Boeing',
+              seatConfiguration: '3-3-3',
+              photo: undefined
+            },
+            departure: {
+              airport: {
+                code: state.profile?.travelPreferences?.homeAirport || 'PHX',
+                city: 'Phoenix',
+                name: 'Phoenix Sky Harbor'
+              },
+              time: new Date(deal.departureDate),
+              terminal: 'A'
+            },
+            arrival: {
+              airport: {
+                code: deal.airportCode,
+                city: deal.destination,
+                name: `${deal.destination} Airport`
+              },
+              time: new Date(deal.returnDate || new Date(new Date(deal.departureDate).getTime() + 8 * 60 * 60 * 1000).toISOString()),
+              terminal: 'B'
+            },
+            duration: 480 + Math.random() * 240,
+            distance: 2000 + Math.random() * 8000
+          }
+        ]
+      }));
+
+      setDiscoveryFlights(flights);
     } catch (err) {
-      console.error('Search error:', err);
-      setError('Failed to search flights. Please try again.');
+      console.error('Discovery error:', err);
+      setError('Failed to load discovery flights. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [state.profile]);
+
+  useEffect(() => {
+    loadDiscoveryFlights();
+  }, [loadDiscoveryFlights]);
 
   // Handle flight booking
   const handleFlightBook = useCallback((flight: Flight) => {
@@ -75,16 +196,16 @@ export default function SearchResultsScreen() {
   const handleTrackPrice = useCallback(async (flight: Flight) => {
     try {
       const tracker = await priceTrackingService.createTracker(
-        'current_user', // In real app, get from user context
+        'current_user',
         {
           origin: flight.segments[0].departure.airport.code,
           destination: flight.segments[flight.segments.length - 1].arrival.airport.code,
           departureDate: flight.segments[0].departure.time,
-          passengers: 1, // Default, could be from search params
+          passengers: 1,
           cabin: flight.cabin
         },
         {
-          alertThreshold: 10, // 10% price drop
+          alertThreshold: 10,
           notifications: {
             email: true,
             push: true,
@@ -130,7 +251,6 @@ export default function SearchResultsScreen() {
   // Handle booking completion
   const handleBookingComplete = useCallback(async (bookingData: BookingRequest | any) => {
     try {
-      // Initiate booking handoff to airline
       const result = await bookingHandoffService.initiateBookingHandoff(bookingData);
       
       if (result.success) {
@@ -140,7 +260,6 @@ export default function SearchResultsScreen() {
           [{ text: 'OK' }]
         );
         
-        // Close all modals
         setShowVoiceBooking(false);
         setShowManualBooking(false);
         setSelectedFlight(null);
@@ -182,8 +301,7 @@ export default function SearchResultsScreen() {
 
   // Handle current flight index change
   const handleIndexChange = useCallback((index: number) => {
-    // Could be used for analytics or other tracking
-    console.log('Current flight index:', index);
+    console.log('Current discovery flight index:', index);
   }, []);
 
   if (loading) {
@@ -197,10 +315,8 @@ export default function SearchResultsScreen() {
           </TouchableOpacity>
           <View style={styles.loadingContent}>
             <ActivityIndicator size="large" color={DesignSystem.colors.primary} />
-            <Text style={styles.loadingText}>Finding the best flights for you</Text>
-            <Text style={styles.loadingSubtext}>
-              {searchParams.origin} → {searchParams.destination}
-            </Text>
+            <Text style={styles.loadingText}>Discovering amazing deals for you</Text>
+            <Text style={styles.loadingSubtext}>Curated travel experiences</Text>
           </View>
         </View>
       </>
@@ -218,9 +334,9 @@ export default function SearchResultsScreen() {
           </TouchableOpacity>
           <View style={styles.errorContent}>
             <IconSymbol name="exclamationmark.triangle" size={64} color={DesignSystem.colors.error} />
-            <Text style={styles.errorTitle}>Search Failed</Text>
+            <Text style={styles.errorTitle}>Discovery Failed</Text>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={performSearch}>
+            <TouchableOpacity style={styles.retryButton} onPress={loadDiscoveryFlights}>
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
@@ -229,8 +345,7 @@ export default function SearchResultsScreen() {
     );
   }
 
-  // Check if we have flights to display
-  if (!searchResults?.flights || searchResults.flights.length === 0) {
+  if (!discoveryFlights || discoveryFlights.length === 0) {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
@@ -240,13 +355,13 @@ export default function SearchResultsScreen() {
             <IconSymbol name="chevron.left" size={24} color={DesignSystem.colors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.noResultsContent}>
-            <IconSymbol name="airplane" size={64} color={DesignSystem.colors.inactive} />
-            <Text style={styles.noResultsTitle}>No Flights Found</Text>
+            <IconSymbol name="safari" size={64} color={DesignSystem.colors.inactive} />
+            <Text style={styles.noResultsTitle}>No Deals Found</Text>
             <Text style={styles.noResultsText}>
-              We couldn't find any flights for {searchParams.origin} → {searchParams.destination}
+              We couldn't find any discovery deals right now. Check back later!
             </Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
-              <Text style={styles.retryButtonText}>Search Again</Text>
+              <Text style={styles.retryButtonText}>Back to Search</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -255,34 +370,33 @@ export default function SearchResultsScreen() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <IconSymbol name="chevron.left" size={24} color={DesignSystem.colors.textPrimary} />
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>
-            {searchParams.origin} → {searchParams.destination}
-          </Text>
-          <Text style={styles.headerSubtitle}>
-            {searchResults.totalResults} flights • &quot;{searchQuery}&quot;
-          </Text>
-        </View>
-      </View>
-
-      {/* Flight Results List */}
-      <FlightResultsList
-        flights={searchResults.flights}
+      {/* TikTok-style Discovery Flight Cards */}
+      <FlightCardCarousel
+        flights={discoveryFlights}
         onFlightBook={handleFlightBook}
         onFlightDetails={handleFlightDetails}
-        onRefresh={performSearch}
-        refreshing={loading}
+        onIndexChange={handleIndexChange}
+        initialIndex={0}
       />
+
+      {/* Back button overlay */}
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButtonOverlay}>
+        <IconSymbol name="chevron.left" size={24} color="white" />
+      </TouchableOpacity>
+
+      {/* Discovery info overlay */}
+      <View style={styles.discoveryInfoOverlay}>
+        <Text style={styles.discoveryInfoText}>
+          ✨ Discovery Feed
+        </Text>
+        <Text style={styles.discoveryInfoSubtext}>
+          {discoveryFlights.length} curated deals
+        </Text>
+      </View>
 
       {/* Booking Modals */}
       <FlightDetailsModal
@@ -317,40 +431,11 @@ export default function SearchResultsScreen() {
         onBookingComplete={handleBookingComplete}
         onSwitchToVoice={handleSwitchToVoice}
       />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: DesignSystem.spacing.lg,
-    paddingBottom: DesignSystem.spacing.md,
-    backgroundColor: DesignSystem.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: DesignSystem.colors.inputBorder,
-  },
-  backButton: {
-    padding: DesignSystem.spacing.sm,
-    marginRight: DesignSystem.spacing.md,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: DesignSystem.colors.textPrimary,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: DesignSystem.colors.textSecondary,
-  },
-
   // Loading Screen
   loadingScreen: {
     flex: 1,
@@ -459,4 +544,41 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
+  // Main Screen Overlays
+  backButtonOverlay: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    padding: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 20,
+    zIndex: 100,
+  },
+  discoveryInfoOverlay: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    alignItems: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    zIndex: 100,
+  },
+  discoveryInfoText: {
+    fontSize: 16,
+    color: 'white',
+    fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  discoveryInfoSubtext: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
 });

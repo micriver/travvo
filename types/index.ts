@@ -26,3 +26,24 @@ export type {
   AIState,
   ConversationState,
 } from './ConversationState';
+
+// Booking and payment types
+export type {
+  PassengerInfo,
+  ContactInfo,
+  PaymentReference,
+  BookingRequest,
+  BaggageOption,
+  BookingStatus,
+  BookingConfirmation,
+  VoiceBookingSession,
+  VoiceBookingStep,
+  AirlineDeepLink,
+  DeepLinkRequest,
+  DeepLinkResponse,
+  PriceTracker,
+  PriceAlert,
+  PriceHistoryEntry,
+  BookingAnalytics,
+  BookingNotificationPreferences,
+} from './Booking';

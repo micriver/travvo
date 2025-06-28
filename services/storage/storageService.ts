@@ -278,6 +278,25 @@ export class StorageService {
       return {};
     }
   }
+
+  // Generic data methods for other services
+  async getData(key: string): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      console.error(`Failed to get data for key ${key}:`, error);
+      return null;
+    }
+  }
+
+  async saveData(key: string, data: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(key, data);
+    } catch (error) {
+      console.error(`Failed to save data for key ${key}:`, error);
+      throw new Error(`Failed to save data for key ${key}`);
+    }
+  }
 }
 
 export const storageService = new StorageService();

@@ -224,10 +224,12 @@ export default function TravelScreen() {
   };
 
   const handleDiscoveryToggle = () => {
-    const newMode = !isDiscoveryMode;
-    setIsDiscoveryMode(newMode);
-    if (newMode && discoveryDeals.length === 0) {
-      loadDiscoveryDeals();
+    if (isDiscoveryMode) {
+      // Switch back to search mode
+      setIsDiscoveryMode(false);
+    } else {
+      // Navigate to dedicated discovery screen
+      router.push('/discovery');
     }
   };
 

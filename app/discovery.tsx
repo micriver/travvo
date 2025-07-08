@@ -25,6 +25,11 @@ import { bookingHandoffService } from '@/services/booking/BookingHandoffService'
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 
 export default function DiscoveryScreen() {
+  // TEMPORARILY DISABLED - Return to main screen
+  React.useEffect(() => {
+    router.replace('/(tabs)');
+  }, []);
+
   const [discoveryFlights, setDiscoveryFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

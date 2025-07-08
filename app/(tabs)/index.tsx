@@ -1,16 +1,30 @@
-import { StyleSheet, TouchableOpacity, View, Text, Animated, TextInput, Alert, ScrollView, ImageBackground, Dimensions } from 'react-native';
-import { useState, useEffect, useRef } from 'react';
-import { router } from 'expo-router';
-import LottieView from 'lottie-react-native';
+import { router } from "expo-router";
+import LottieView from "lottie-react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  ImageBackground,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { DesignSystem } from '@/constants/DesignSystem';
-import { useUserPreferences } from '@/contexts/UserPreferencesContext';
-import { FlightSearchParams } from '@/types';
-import { aiSearchService, DestinationSuggestion } from '@/services/ai/aiSearchService';
-import { dealDetectionService } from '@/services/deals/dealDetectionService';
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { DesignSystem } from "@/constants/DesignSystem";
+import { useUserPreferences } from "@/contexts/UserPreferencesContext";
+import {
+  aiSearchService,
+  DestinationSuggestion,
+} from "@/services/ai/aiSearchService";
+import { dealDetectionService } from "@/services/deals/dealDetectionService";
+import { FlightSearchParams } from "@/types";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 // Animated AI Dot Component
 function AnimatedAIDot({ isListening }: { isListening: boolean }) {
@@ -34,7 +48,7 @@ function AnimatedAIDot({ isListening }: { isListening: boolean }) {
           }),
         ])
       );
-      
+
       // Scale up when listening
       const scaleAnimation = Animated.timing(scaleAnim, {
         toValue: 1.3,
@@ -105,12 +119,27 @@ interface DealCard {
   returnDate?: string;
   airportCode: string;
   reason: string;
-  dealType: 'flexible_date' | 'budget_match' | 'cabin_upgrade' | 'last_minute' | 'popular';
+  dealType:
+    | "flexible_date"
+    | "budget_match"
+    | "cabin_upgrade"
+    | "last_minute"
+    | "popular";
 }
 
-function DiscoveryDealCard({ deal, onPress }: { deal: DealCard; onPress: () => void }) {
+function DiscoveryDealCard({
+  deal,
+  onPress,
+}: {
+  deal: DealCard;
+  onPress: () => void;
+}) {
   return (
-    <TouchableOpacity style={styles.dealCard} onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity
+      style={styles.dealCard}
+      onPress={onPress}
+      activeOpacity={0.9}
+    >
       <ImageBackground
         source={{ uri: deal.image }}
         style={styles.dealImage}
@@ -122,13 +151,13 @@ function DiscoveryDealCard({ deal, onPress }: { deal: DealCard; onPress: () => v
               <Text style={styles.discountText}>{deal.discount}% OFF</Text>
             </View>
           )}
-          
+
           <View style={styles.dealContent}>
             <View style={styles.dealHeader}>
               <Text style={styles.dealDestination}>{deal.destination}</Text>
               <Text style={styles.dealTitle}>{deal.title}</Text>
             </View>
-            
+
             <View style={styles.dealFooter}>
               <View style={styles.dealDates}>
                 <Text style={styles.dealDate}>{deal.departureDate}</Text>
@@ -136,10 +165,12 @@ function DiscoveryDealCard({ deal, onPress }: { deal: DealCard; onPress: () => v
                   <Text style={styles.dealDate}> - {deal.returnDate}</Text>
                 )}
               </View>
-              
+
               <View style={styles.dealPricing}>
                 {deal.originalPrice && (
-                  <Text style={styles.originalPrice}>${deal.originalPrice}</Text>
+                  <Text style={styles.originalPrice}>
+                    ${deal.originalPrice}
+                  </Text>
                 )}
                 <Text style={styles.dealPrice}>${deal.price}</Text>
               </View>
@@ -154,11 +185,12 @@ function DiscoveryDealCard({ deal, onPress }: { deal: DealCard; onPress: () => v
 export default function TravelScreen() {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<DestinationSuggestion[]>([]);
-  const [clarificationQuestion, setClarificationQuestion] = useState<string>('');
+  const [clarificationQuestion, setClarificationQuestion] =
+    useState<string>("");
   const [isDiscoveryMode, setIsDiscoveryMode] = useState(false);
   const [discoveryDeals, setDiscoveryDeals] = useState<DealCard[]>([]);
   const { state } = useUserPreferences();
@@ -172,38 +204,42 @@ export default function TravelScreen() {
       // Show generic deals for users without onboarding
       setDiscoveryDeals([
         {
-          id: 'generic1',
-          title: 'Weekend Getaway',
-          destination: 'Las Vegas',
+          id: "generic1",
+          title: "Weekend Getaway",
+          destination: "Las Vegas",
           price: 189,
           originalPrice: 280,
           discount: 32,
-          image: 'https://images.unsplash.com/photo-1605833273317-4feaaa6af21c?w=400',
-          departureDate: 'Dec 14',
-          returnDate: 'Dec 16',
-          airportCode: 'LAS',
-          reason: 'Popular weekend destination',
-          dealType: 'popular'
+          image:
+            "https://images.unsplash.com/photo-1605833273317-4feaaa6af21c?w=400",
+          departureDate: "Dec 14",
+          returnDate: "Dec 16",
+          airportCode: "LAS",
+          reason: "Popular weekend destination",
+          dealType: "popular",
         },
         {
-          id: 'generic2',
-          title: 'City Break',
-          destination: 'San Francisco',
+          id: "generic2",
+          title: "City Break",
+          destination: "San Francisco",
           price: 245,
-          image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400',
-          departureDate: 'Dec 20',
-          returnDate: 'Dec 27',
-          airportCode: 'SFO',
-          reason: 'Great for exploring',
-          dealType: 'popular'
-        }
+          image:
+            "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400",
+          departureDate: "Dec 20",
+          returnDate: "Dec 27",
+          airportCode: "SFO",
+          reason: "Great for exploring",
+          dealType: "popular",
+        },
       ]);
       return;
     }
 
     try {
-      const deals = await dealDetectionService.findPersonalizedDeals(state.profile);
-      const formattedDeals: DealCard[] = deals.map(deal => ({
+      const deals = await dealDetectionService.findPersonalizedDeals(
+        state.profile
+      );
+      const formattedDeals: DealCard[] = deals.map((deal) => ({
         id: deal.id,
         title: deal.description,
         destination: deal.destination,
@@ -211,15 +247,23 @@ export default function TravelScreen() {
         originalPrice: deal.originalPrice,
         discount: deal.discount,
         image: `https://images.unsplash.com/400x300/?sig=${deal.id}`,
-        departureDate: new Date(deal.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        returnDate: deal.returnDate ? new Date(deal.returnDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : undefined,
+        departureDate: new Date(deal.departureDate).toLocaleDateString(
+          "en-US",
+          { month: "short", day: "numeric" }
+        ),
+        returnDate: deal.returnDate
+          ? new Date(deal.returnDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })
+          : undefined,
         airportCode: deal.airportCode,
         reason: deal.description,
-        dealType: deal.dealType as any
+        dealType: deal.dealType as any,
       }));
       setDiscoveryDeals(formattedDeals);
     } catch (error) {
-      console.error('Failed to load discovery deals:', error);
+      console.error("Failed to load discovery deals:", error);
     }
   };
 
@@ -229,71 +273,95 @@ export default function TravelScreen() {
       setIsDiscoveryMode(false);
     } else {
       // Navigate to dedicated discovery screen
-      router.push('/discovery');
+      router.push("/discovery");
     }
   };
 
   const handleDealPress = (deal: DealCard) => {
     router.push({
-      pathname: '/search-results',
+      pathname: "/search-results",
       params: {
         searchParams: JSON.stringify({
-          origin: state.profile?.travelPreferences?.homeAirport || 'PHX',
+          origin: state.profile?.travelPreferences?.homeAirport || "PHX",
           destination: deal.airportCode,
           departureDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
           passengers: { adults: 1, children: 0, infants: 0 },
-          cabin: 'economy',
+          cabin: "economy",
           maxStops: 2,
-          sortBy: 'price',
-          sortOrder: 'asc',
+          sortBy: "price",
+          sortOrder: "asc",
         }),
         searchQuery: deal.destination,
       },
     });
   };
 
-  const handleSearchWithDefaultAirport = async (selectedDestination?: DestinationSuggestion) => {
+  const handleSearchWithDefaultAirport = async (
+    selectedDestination?: DestinationSuggestion
+  ) => {
     // Use PHX (Phoenix) as default for testing
-    const defaultHomeAirport = 'PHX';
-    
+    const defaultHomeAirport = "PHX";
+
     setIsSearching(true);
-    
+
     try {
       let destination: DestinationSuggestion;
-      
+
       if (selectedDestination) {
         destination = selectedDestination;
       } else {
         // Use AI to parse the search query with default airport
-        const travelIntent = await aiSearchService.parseSearchQuery(searchQuery, {
-          homeAirport: defaultHomeAirport,
-          preferences: {
-            preferredCabin: 'economy',
-            maxStops: 2,
-            preferredAirlines: [],
-            avoidedAirlines: [],
-            flexibility: 'somewhat_flexible',
-            budgetRange: { min: 200, max: 1000, currency: 'USD' },
-            advanceBookingPreference: 14,
-            preferredDepartureTime: { earliest: '06:00', latest: '22:00' },
-            seatPreferences: { window: true, aisle: false, middle: false, front: false, emergency_exit: false },
-            importantAmenities: [],
-            mealPreferences: [],
-            usualTravelGroup: { adults: 1, children: 0, infants: 0 },
-            baggagePreferences: { alwaysCarryOn: false, usuallyCheckBags: false, packLight: true },
-          },
-        });
+        const travelIntent = await aiSearchService.parseSearchQuery(
+          searchQuery,
+          {
+            homeAirport: defaultHomeAirport,
+            preferences: {
+              preferredCabin: "economy",
+              maxStops: 2,
+              preferredAirlines: [],
+              avoidedAirlines: [],
+              flexibility: "somewhat_flexible",
+              budgetRange: { min: 200, max: 1000, currency: "USD" },
+              advanceBookingPreference: 14,
+              preferredDepartureTime: { earliest: "06:00", latest: "22:00" },
+              seatPreferences: {
+                window: true,
+                aisle: false,
+                middle: false,
+                front: false,
+                emergency_exit: false,
+              },
+              importantAmenities: [],
+              mealPreferences: [],
+              usualTravelGroup: { adults: 1, children: 0, infants: 0 },
+              baggagePreferences: {
+                alwaysCarryOn: false,
+                usuallyCheckBags: false,
+                packLight: true,
+              },
+            },
+          }
+        );
 
-        if (travelIntent.clarificationNeeded && travelIntent.destinations.length > 1) {
+        if (
+          travelIntent.clarificationNeeded &&
+          travelIntent.destinations.length > 1
+        ) {
           setSuggestions(travelIntent.destinations);
-          setClarificationQuestion(travelIntent.clarificationQuestion || 'Which destination would you prefer?');
+          setClarificationQuestion(
+            travelIntent.clarificationQuestion ||
+              "Which destination would you prefer?"
+          );
           setShowSuggestions(true);
           setIsSearching(false);
           return;
         }
 
         if (travelIntent.destinations.length === 0) {
-          Alert.alert('Destination Not Found', 'I could not understand your destination. Please try being more specific.');
+          Alert.alert(
+            "Destination Not Found",
+            "I could not understand your destination. Please try being more specific."
+          );
           setIsSearching(false);
           return;
         }
@@ -306,86 +374,114 @@ export default function TravelScreen() {
         destination: destination.airportCode,
         departureDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         passengers: { adults: 1, children: 0, infants: 0 },
-        cabin: 'economy',
+        cabin: "economy",
         maxStops: 2,
-        sortBy: 'price',
-        sortOrder: 'asc',
+        sortBy: "price",
+        sortOrder: "asc",
       };
 
       setShowSuggestions(false);
       setSuggestions([]);
-      setClarificationQuestion('');
+      setClarificationQuestion("");
 
       router.push({
-        pathname: '/search-results',
+        pathname: "/search-results",
         params: {
           searchParams: JSON.stringify(searchParams),
-          searchQuery: selectedDestination ? `${destination.city}, ${destination.country}` : searchQuery,
+          searchQuery: selectedDestination
+            ? `${destination.city}, ${destination.country}`
+            : searchQuery,
         },
       });
     } catch (error) {
-      console.error('Search error:', error);
-      Alert.alert('Search Error', 'Something went wrong. Please try again.');
+      console.error("Search error:", error);
+      Alert.alert("Search Error", "Something went wrong. Please try again.");
     } finally {
       setIsSearching(false);
     }
   };
 
   const handleSearch = async (selectedDestination?: DestinationSuggestion) => {
-    console.log('🚀 handleSearch called with:', { searchQuery, selectedDestination: !!selectedDestination });
-    
+    console.log("🚀 handleSearch called with:", {
+      searchQuery,
+      selectedDestination: !!selectedDestination,
+    });
+
     if (!searchQuery.trim() && !selectedDestination) {
-      Alert.alert('Search Required', 'Please enter a destination to search for flights.');
+      Alert.alert(
+        "Search Required",
+        "Please enter a destination to search for flights."
+      );
       return;
     }
 
     // More thorough checking for home airport
-    console.log('State profile:', state.profile);
-    console.log('Travel preferences:', state.profile?.travelPreferences);
-    console.log('Home airport:', state.profile?.travelPreferences?.homeAirport);
+    console.log("State profile:", state.profile);
+    console.log("Travel preferences:", state.profile?.travelPreferences);
+    console.log("Home airport:", state.profile?.travelPreferences?.homeAirport);
 
-    if (!state.profile || !state.profile.travelPreferences || !state.profile.travelPreferences.homeAirport) {
-      Alert.alert('Home Airport Required', 'Please complete your onboarding to set your home airport first.', [
-        { text: 'Go to Onboarding', onPress: () => router.push('/onboarding/splash') },
-        { text: 'Use Default (Phoenix)', onPress: () => handleSearchWithDefaultAirport(selectedDestination) },
-        { text: 'Cancel', style: 'cancel' }
-      ]);
+    if (
+      !state.profile ||
+      !state.profile.travelPreferences ||
+      !state.profile.travelPreferences.homeAirport
+    ) {
+      Alert.alert(
+        "Home Airport Required",
+        "Please complete your onboarding to set your home airport first.",
+        [
+          {
+            text: "Go to Onboarding",
+            onPress: () => router.push("/onboarding/splash"),
+          },
+          {
+            text: "Use Default (Phoenix)",
+            onPress: () => handleSearchWithDefaultAirport(selectedDestination),
+          },
+          { text: "Cancel", style: "cancel" },
+        ]
+      );
       return;
     }
 
     setIsSearching(true);
-    
+
     try {
       let destination: DestinationSuggestion;
-      
-      if (selectedDestination && typeof selectedDestination === 'object' && selectedDestination.airportCode) {
-        console.log('📍 Using selected destination:', selectedDestination);
+
+      if (
+        selectedDestination &&
+        typeof selectedDestination === "object" &&
+        selectedDestination.airportCode
+      ) {
+        console.log("📍 Using selected destination:", selectedDestination);
         destination = selectedDestination;
       } else {
         // Use simple OpenAI search
-        console.log('🔍 Starting OpenAI search for:', searchQuery);
-        
+        console.log("🔍 Starting OpenAI search for:", searchQuery);
+
         try {
-          const { searchWithOpenAI } = await import('@/services/ai/simpleOpenAI');
+          const { searchWithOpenAI } = await import(
+            "@/services/ai/simpleOpenAI"
+          );
           const aiResult = await searchWithOpenAI(searchQuery);
           destination = {
             city: aiResult.city,
             country: aiResult.country,
             airportCode: aiResult.airportCode,
             airportName: `${aiResult.city} Airport`,
-            reason: 'AI suggestion',
+            reason: "AI suggestion",
             confidence: 0.9,
           };
-          console.log('✅ OpenAI result:', destination);
+          console.log("✅ OpenAI result:", destination);
         } catch (error) {
-          console.log('❌ OpenAI failed, using default:', error);
+          console.log("❌ OpenAI failed, using default:", error);
           // Default to Paris for any query when OpenAI fails
           destination = {
-            city: 'Paris',
-            country: 'France',
-            airportCode: 'CDG',
-            airportName: 'Charles de Gaulle',
-            reason: 'Default destination',
+            city: "Paris",
+            country: "France",
+            airportCode: "CDG",
+            airportName: "Charles de Gaulle",
+            reason: "Default destination",
             confidence: 0.5,
           };
         }
@@ -393,11 +489,16 @@ export default function TravelScreen() {
 
       const originAirport = state.profile.travelPreferences.homeAirport;
       const destinationAirport = destination.airportCode;
-      
-      console.log('Creating search params:', { origin: originAirport, destination: destinationAirport });
-      
+
+      console.log("Creating search params:", {
+        origin: originAirport,
+        destination: destinationAirport,
+      });
+
       if (!originAirport || !destinationAirport) {
-        throw new Error(`Missing airport data: origin=${originAirport}, destination=${destinationAirport}`);
+        throw new Error(
+          `Missing airport data: origin=${originAirport}, destination=${destinationAirport}`
+        );
       }
 
       const searchParams: FlightSearchParams = {
@@ -409,28 +510,30 @@ export default function TravelScreen() {
           children: 0,
           infants: 0,
         },
-        cabin: state.profile.travelPreferences.preferredCabin || 'economy',
+        cabin: state.profile.travelPreferences.preferredCabin || "economy",
         maxStops: state.profile.travelPreferences.maxStops || 2,
-        sortBy: 'price',
-        sortOrder: 'asc',
+        sortBy: "price",
+        sortOrder: "asc",
       };
 
       // Clear suggestions
       setShowSuggestions(false);
       setSuggestions([]);
-      setClarificationQuestion('');
+      setClarificationQuestion("");
 
       // Navigate to search results with the search params
       router.push({
-        pathname: '/search-results',
+        pathname: "/search-results",
         params: {
           searchParams: JSON.stringify(searchParams),
-          searchQuery: selectedDestination ? `${destination.city}, ${destination.country}` : searchQuery,
+          searchQuery: selectedDestination
+            ? `${destination.city}, ${destination.country}`
+            : searchQuery,
         },
       });
     } catch (error) {
-      console.error('Search error:', error);
-      Alert.alert('Search Error', 'Something went wrong. Please try again.');
+      console.error("Search error:", error);
+      Alert.alert("Search Error", "Something went wrong. Please try again.");
     } finally {
       setIsSearching(false);
     }
@@ -459,7 +562,9 @@ export default function TravelScreen() {
               <Text style={styles.suggestionCity}>
                 {suggestion.city}, {suggestion.country}
               </Text>
-              <Text style={styles.suggestionAirport}>{suggestion.airportCode}</Text>
+              <Text style={styles.suggestionAirport}>
+                {suggestion.airportCode}
+              </Text>
             </View>
             <Text style={styles.suggestionReason}>{suggestion.reason}</Text>
           </TouchableOpacity>
@@ -469,7 +574,7 @@ export default function TravelScreen() {
           onPress={() => {
             setShowSuggestions(false);
             setSuggestions([]);
-            setClarificationQuestion('');
+            setClarificationQuestion("");
           }}
         >
           <Text style={styles.cancelSuggestionsText}>Cancel</Text>
@@ -483,70 +588,57 @@ export default function TravelScreen() {
       {/* Header with Discovery Toggle and Settings */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
-          {isDiscoveryMode ? 'Discover Deals' : 'Where would you like to go?'}
+          {isDiscoveryMode ? "Discover Deals" : "Where would you like to go?"}
         </Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity 
-            style={styles.discoveryButton} 
-            onPress={handleDiscoveryToggle}
-            activeOpacity={0.8}
-          >
-            <IconSymbol 
-              name={isDiscoveryMode ? "magnifyingglass" : "safari"} 
-              size={24} 
-              color={isDiscoveryMode ? DesignSystem.colors.textSecondary : DesignSystem.colors.primary} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.settingsButton} 
-            onPress={() => router.push('/settings')}
-            activeOpacity={0.8}
-          >
-            <IconSymbol 
-              name="gear" 
-              size={22} 
-              color={DesignSystem.colors.textSecondary} 
-            />
-          </TouchableOpacity>
-        </View>
+        {/* Header actions removed - settings moved to bottom */}
       </View>
 
       {/* Main Content Area */}
       <View style={styles.contentArea}>
         {isDiscoveryMode ? (
           /* Discovery Mode */
-          <ScrollView 
+          <ScrollView
             style={styles.discoveryContent}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.discoveryScrollContent}
           >
             {!state.profile && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.onboardingBanner}
-                onPress={() => router.push('/onboarding/splash')}
+                onPress={() => router.push("/onboarding/splash")}
                 activeOpacity={0.8}
               >
-                <IconSymbol name="wand.and.stars" size={20} color={DesignSystem.colors.primary} />
+                <IconSymbol
+                  name='wand.and.stars'
+                  size={20}
+                  color={DesignSystem.colors.primary}
+                />
                 <Text style={styles.onboardingText}>
                   Complete setup for personalized deals
                 </Text>
-                <IconSymbol name="chevron.right" size={16} color={DesignSystem.colors.primary} />
+                <IconSymbol
+                  name='chevron.right'
+                  size={16}
+                  color={DesignSystem.colors.primary}
+                />
               </TouchableOpacity>
             )}
-            
+
             <View style={styles.dealsSection}>
               <Text style={styles.dealsSectionTitle}>
-                {state.profile ? '🔥 Hot Deals for You' : '✈️ Popular Destinations'}
+                {state.profile
+                  ? "🔥 Hot Deals for You"
+                  : "✈️ Popular Destinations"}
               </Text>
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.dealsContainer}
               >
                 {discoveryDeals.map((deal) => (
-                  <DiscoveryDealCard 
-                    key={deal.id} 
-                    deal={deal} 
+                  <DiscoveryDealCard
+                    key={deal.id}
+                    deal={deal}
                     onPress={() => handleDealPress(deal)}
                   />
                 ))}
@@ -558,8 +650,8 @@ export default function TravelScreen() {
           <View style={styles.interactionArea}>
             {isVoiceMode ? (
               <View style={styles.voiceInterface}>
-                <TouchableOpacity 
-                  style={styles.voiceButton} 
+                <TouchableOpacity
+                  style={styles.voiceButton}
                   onPress={handleVoicePress}
                   activeOpacity={0.8}
                 >
@@ -569,24 +661,31 @@ export default function TravelScreen() {
             ) : (
               <View style={styles.typeInterface}>
                 <View style={styles.searchBox}>
-                  <IconSymbol name="magnifyingglass" size={20} color={DesignSystem.colors.inactive} />
+                  <IconSymbol
+                    name='magnifyingglass'
+                    size={20}
+                    color={DesignSystem.colors.inactive}
+                  />
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="Where would you like to go?"
+                    placeholder='Where would you like to go?'
                     placeholderTextColor={DesignSystem.colors.textSecondary}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     onSubmitEditing={handleSearch}
-                    returnKeyType="search"
-                    autoCapitalize="words"
+                    returnKeyType='search'
+                    autoCapitalize='words'
                     autoCorrect={false}
                   />
                   {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={handleSearch} disabled={isSearching}>
-                      <IconSymbol 
-                        name={isSearching ? "hourglass" : "arrow.right"} 
-                        size={20} 
-                        color={DesignSystem.colors.primary} 
+                    <TouchableOpacity
+                      onPress={handleSearch}
+                      disabled={isSearching}
+                    >
+                      <IconSymbol
+                        name={isSearching ? "hourglass" : "arrow.right"}
+                        size={20}
+                        color={DesignSystem.colors.primary}
                       />
                     </TouchableOpacity>
                   )}
@@ -601,29 +700,47 @@ export default function TravelScreen() {
           </View>
         )}
       </View>
-      
+
       {/* AI Suggestions (only in search mode) */}
       {!isDiscoveryMode && renderSuggestions()}
 
-      {/* Mode Switch Button - Fixed Position (only in search mode) */}
+      {/* Bottom Controls - Fixed Position (only in search mode) */}
       {!isDiscoveryMode && (
-        <TouchableOpacity 
-          style={styles.modeSwitchButton} 
-          onPress={() => setIsVoiceMode(!isVoiceMode)}
-          activeOpacity={0.7}
-        >
-          {isVoiceMode ? (
-            <IconSymbol name="keyboard" size={24} color={DesignSystem.colors.textSecondary} />
-          ) : (
-            <LottieView
-              source={require('@/assets/animations/audio-wave.json')}
-              style={styles.lottieAnimation}
-              autoPlay={true}
-              loop={true}
-              speed={1}
+        <View style={styles.bottomControls}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => router.push("/(tabs)/settings")}
+            activeOpacity={0.7}
+          >
+            <IconSymbol
+              name='gear'
+              size={24}
+              color={DesignSystem.colors.textSecondary}
             />
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.modeSwitchButton}
+            onPress={() => setIsVoiceMode(!isVoiceMode)}
+            activeOpacity={0.7}
+          >
+            {isVoiceMode ? (
+              <IconSymbol
+                name='keyboard'
+                size={24}
+                color={DesignSystem.colors.textSecondary}
+              />
+            ) : (
+              <LottieView
+                source={require("@/assets/animations/audio-wave.json")}
+                style={styles.lottieAnimation}
+                autoPlay={true}
+                loop={true}
+                speed={1}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
@@ -633,30 +750,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: DesignSystem.colors.background,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     paddingHorizontal: DesignSystem.spacing.xl,
     paddingTop: 60,
     paddingBottom: 60,
   },
   interactionArea: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   voiceInterface: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: DesignSystem.spacing.xl,
-    width: '100%',
+    width: "100%",
   },
   typeInterface: {
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     gap: DesignSystem.spacing.xl,
   },
   mainQuestion: {
     fontSize: 28,
-    fontWeight: '300',
-    textAlign: 'center',
+    fontWeight: "300",
+    textAlign: "center",
     color: DesignSystem.colors.textPrimary,
     lineHeight: 36,
     letterSpacing: -0.5,
@@ -664,13 +781,13 @@ const styles = StyleSheet.create({
     marginBottom: DesignSystem.spacing.lg,
   },
   voiceButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: DesignSystem.spacing.xl,
   },
   aiDotContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     width: 120,
     height: 120,
   },
@@ -691,7 +808,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   aiDotPulse: {
-    position: 'absolute',
+    position: "absolute",
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -699,13 +816,13 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: DesignSystem.colors.card,
     borderRadius: DesignSystem.borderRadius.medium + 4,
     paddingHorizontal: DesignSystem.spacing.lg,
     paddingVertical: DesignSystem.spacing.md,
-    width: '100%',
+    width: "100%",
     gap: DesignSystem.spacing.sm,
     borderWidth: 1,
     borderColor: DesignSystem.colors.inputBorder,
@@ -720,15 +837,20 @@ const styles = StyleSheet.create({
   homeAirportText: {
     fontSize: 14,
     color: DesignSystem.colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: DesignSystem.spacing.sm,
   },
-  modeSwitchButton: {
-    position: 'absolute',
+  bottomControls: {
+    position: "absolute",
     bottom: DesignSystem.spacing.xl + 20,
     right: DesignSystem.spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    gap: DesignSystem.spacing.md,
+    alignItems: "center",
+  },
+  modeSwitchButton: {
+    alignItems: "center",
+    justifyContent: "center",
     padding: DesignSystem.spacing.md,
     backgroundColor: DesignSystem.colors.card,
     borderRadius: DesignSystem.borderRadius.medium,
@@ -741,9 +863,9 @@ const styles = StyleSheet.create({
   audioIcon: {
     width: 24,
     height: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 1.5,
   },
   waveformBar: {
@@ -797,7 +919,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: DesignSystem.colors.textPrimary,
     marginBottom: DesignSystem.spacing.md,
-    textAlign: 'center',
+    textAlign: "center",
   },
   suggestionItem: {
     paddingVertical: DesignSystem.spacing.md,
@@ -809,20 +931,20 @@ const styles = StyleSheet.create({
     borderColor: DesignSystem.colors.inputBorder,
   },
   suggestionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: DesignSystem.spacing.xs,
   },
   suggestionCity: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: DesignSystem.colors.textPrimary,
   },
   suggestionAirport: {
     fontSize: 14,
     color: DesignSystem.colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   suggestionReason: {
     fontSize: 14,
@@ -830,7 +952,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   cancelSuggestionsButton: {
-    alignSelf: 'center',
+    alignSelf: "center",
     paddingHorizontal: DesignSystem.spacing.lg,
     paddingVertical: DesignSystem.spacing.sm,
     marginTop: DesignSystem.spacing.sm,
@@ -838,25 +960,25 @@ const styles = StyleSheet.create({
   cancelSuggestionsText: {
     fontSize: 16,
     color: DesignSystem.colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   // Discovery Mode Styles
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: DesignSystem.spacing.xl,
     paddingTop: 60,
     paddingBottom: DesignSystem.spacing.lg,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '300',
+    fontWeight: "300",
     color: DesignSystem.colors.textPrimary,
     flex: 1,
   },
   headerActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: DesignSystem.spacing.sm,
   },
   discoveryButton: {
@@ -879,8 +1001,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   onboardingBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: DesignSystem.colors.primaryBackground,
     marginHorizontal: DesignSystem.spacing.xl,
     marginBottom: DesignSystem.spacing.xl,
@@ -892,14 +1014,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: DesignSystem.colors.primary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   dealsSection: {
     marginBottom: DesignSystem.spacing.xl,
   },
   dealsSectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
     color: DesignSystem.colors.textPrimary,
     marginLeft: DesignSystem.spacing.xl,
     marginBottom: DesignSystem.spacing.lg,
@@ -916,28 +1038,28 @@ const styles = StyleSheet.create({
   dealImage: {
     flex: 1,
     borderRadius: DesignSystem.borderRadius.medium,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   dealImageStyle: {
     borderRadius: DesignSystem.borderRadius.medium,
   },
   dealOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
     padding: DesignSystem.spacing.lg,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   discountBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     backgroundColor: DesignSystem.colors.primary,
     paddingHorizontal: DesignSystem.spacing.sm,
     paddingVertical: 4,
     borderRadius: DesignSystem.borderRadius.small,
   },
   discountText: {
-    color: 'white',
+    color: "white",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dealContent: {
     gap: DesignSystem.spacing.md,
@@ -947,36 +1069,36 @@ const styles = StyleSheet.create({
   },
   dealDestination: {
     fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
+    fontWeight: "700",
+    color: "white",
   },
   dealTitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: "rgba(255, 255, 255, 0.9)",
   },
   dealFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
   },
   dealDates: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   dealDate: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: "rgba(255, 255, 255, 0.8)",
   },
   dealPricing: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   originalPrice: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textDecorationLine: 'line-through',
+    color: "rgba(255, 255, 255, 0.7)",
+    textDecorationLine: "line-through",
   },
   dealPrice: {
     fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
+    fontWeight: "700",
+    color: "white",
   },
 });

@@ -231,7 +231,7 @@ class PexelsVideoService {
   constructor() {
     this.apiKey = process.env.EXPO_PUBLIC_PEXELS_API_KEY || '';
     if (!this.apiKey) {
-      console.warn('Pexels API key not found. Video search will be disabled.');
+      console.warn('❌ Pexels API key not found. Add EXPO_PUBLIC_PEXELS_API_KEY to .env file');
     }
   }
 
@@ -249,41 +249,50 @@ class PexelsVideoService {
     } = {}
   ): Promise<EnhancedVideoAsset[]> {
     if (!this.apiKey) {
-      console.log('ℹ️ Add EXPO_PUBLIC_PEXELS_API_KEY to .env for enhanced travel videos');
       return [];
     }
 
-    const destinationMapping = this.DESTINATION_VIDEO_MAPPING[airportCode];
-    const searchQueries = this.buildSearchQueries(airportCode, cityName, destinationMapping, options);
+    // Simplified: Just search for the main destination term
+    const mainQuery = cityName ? `${cityName} travel` : `${airportCode} destination`;
+    console.log(`🎬 Loading video for ${cityName || airportCode} with query: "${mainQuery}"`);
     
     const allVideos: EnhancedVideoAsset[] = [];
     
-    // Execute searches with intelligent fallback
-    for (const query of searchQueries) {
-      try {
-        const videos = await this.searchVideos(query.searchTerm, {
-          ...options,
-          perPage: Math.min(options.perPage || 3, 5)
-        });
-        
-        // Score videos based on relevance
-        const scoredVideos = this.scoreVideoRelevance(videos, query, airportCode);
-        allVideos.push(...scoredVideos);
-        
-        // Stop if we have enough high-quality results
-        if (allVideos.length >= (options.perPage || 5) && query.priority === 'high') {
-          break;
-        }
-      } catch (error) {
-        console.warn(`Failed to search videos for "${query.searchTerm}":`, error);
+    try {
+      const videos = await this.searchVideos(mainQuery, {
+        ...options,
+        perPage: 1 // Only request 1 video
+      });
+      
+      // Convert first video to EnhancedVideoAsset format
+      for (const video of videos.slice(0, 1)) {
+        const enhancedVideo: EnhancedVideoAsset = {
+          id: `pexels-${video.id}`,
+          type: 'video' as const,
+          url: this.selectBestVideoFile(video.video_files),
+          previewUrl: video.image,
+          credit: `Video by ${video.user.name} on Pexels`,
+          description: `${mainQuery} - Travel video`,
+          quality: this.calculateVideoQuality(video),
+          tags: video.tags || [],
+          isOptimized: false
+        };
+        allVideos.push(enhancedVideo);
       }
+    } catch (error) {
+      console.warn(`Failed to search videos for "${mainQuery}":`, error);
     }
 
-    // Remove duplicates and sort by relevance
-    const uniqueVideos = this.deduplicateAndRank(allVideos);
-    
     // Apply final filtering and optimization
-    return this.finalizeVideoSelection(uniqueVideos, options);
+    const finalVideos = await this.finalizeVideoSelection(allVideos, options);
+    
+    if (finalVideos.length > 0) {
+      console.log(`✅ Video loaded from Pexels for ${cityName || airportCode}`);
+    } else {
+      console.log(`❌ No videos found for ${cityName || airportCode}`);
+    }
+    
+    return finalVideos;
   }
 
   /**
@@ -306,16 +315,18 @@ class PexelsVideoService {
 
           const response = await fetch(`${this.baseUrl}/search?${params}`, {
             headers: {
-              'Authorization': this.apiKey,
-              'User-Agent': 'AI-Travel-App/1.0'
+              'Authorization': this.apiKey
             },
           });
 
           if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Pexels API error: ${response.status} ${response.statusText}`, errorText);
             throw new Error(`Pexels API error: ${response.status} ${response.statusText}`);
           }
 
           const data: PexelsSearchResponse = await response.json();
+          console.log(`🎬 Pexels API returned ${data.videos?.length || 0} videos for query: "${query}"`);
           resolve(data.videos || []);
         } catch (error) {
           reject(error);
@@ -451,6 +462,24 @@ class PexelsVideoService {
   /**
    * Select the best video file based on quality and compatibility
    */
+  private calculateVideoQuality(video: PexelsVideo): number {
+    let score = 50; // Base score
+    
+    // Resolution bonus
+    if (video.width >= 1920) score += 30;
+    else if (video.width >= 1280) score += 20;
+    else if (video.width >= 720) score += 10;
+    
+    // Duration preference (5-60 seconds ideal for TikTok-style)
+    if (video.duration >= 5 && video.duration <= 60) score += 20;
+    else if (video.duration <= 5) score += 10;
+    
+    // Portrait orientation bonus (height > width)
+    if (video.height > video.width) score += 15;
+    
+    return Math.min(100, score);
+  }
+
   private selectBestVideoFile(videoFiles: PexelsVideo['video_files']): string {
     // Prefer HD quality, H.264 format, portrait orientation
     const sortedFiles = videoFiles.sort((a, b) => {
@@ -510,13 +539,11 @@ class PexelsVideoService {
       try {
         // Try video optimization, but gracefully fallback if it fails
         try {
-          console.log('🎬 Optimizing video:', video.url);
           const optimizedVideo = await videoOptimizer.getOptimizedVideo(video.url);
           video.url = optimizedVideo.url;
           video.previewUrl = optimizedVideo.thumbnail || video.previewUrl;
-          console.log('✅ Video optimization successful');
         } catch (optimizationError) {
-          console.warn('Video optimization failed, using original:', optimizationError);
+          console.warn('Video optimization failed, using original');
           // Continue with original video URL
         }
 
@@ -525,7 +552,6 @@ class PexelsVideoService {
           try {
             const cachedThumbnail = await imageCache.getOptimizedImage(video.previewUrl, 'medium');
             video.previewUrl = cachedThumbnail;
-            console.log('✅ Thumbnail cached successfully');
           } catch (cacheError) {
             console.warn('Thumbnail caching failed, using original:', cacheError);
           }

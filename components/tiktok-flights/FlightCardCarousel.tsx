@@ -46,7 +46,6 @@ export const FlightCardCarousel = React.memo(function FlightCardCarousel({
   // Shared values for animations
   const scrollY = useSharedValue(initialIndex * SCREEN_HEIGHT);
   const isScrolling = useSharedValue(false);
-  const lastScrollTime = useSharedValue(0);
 
   // Initialize scroll position
   useEffect(() => {
@@ -76,44 +75,47 @@ export const FlightCardCarousel = React.memo(function FlightCardCarousel({
     }
   }, [activeIndex, flights.length, onIndexChange]);
 
-  // Derive current index from scroll position
+  // Optimized index tracking with debouncing
   const currentIndex = useDerivedValue(() => {
     const index = Math.round(scrollY.value / SCREEN_HEIGHT);
     return Math.max(0, Math.min(index, flights.length - 1));
   });
 
-  // Monitor index changes with throttling to prevent infinite loops
+  // Debounced index change to prevent excessive updates
   const lastProcessedIndex = useSharedValue(-1);
+  const indexChangeDebounce = useSharedValue(0);
+  
   useDerivedValue(() => {
     const newIndex = currentIndex.value;
     if (newIndex !== lastProcessedIndex.value && newIndex >= 0 && newIndex < flights.length) {
-      lastProcessedIndex.value = newIndex;
-      console.log(`🔄 [Carousel] Index change detected: ${activeIndex} → ${newIndex}`);
-      runOnJS(handleIndexChange)(newIndex);
+      const now = Date.now();
+      if (now - indexChangeDebounce.value > 100) {
+        lastProcessedIndex.value = newIndex;
+        indexChangeDebounce.value = now;
+        runOnJS(handleIndexChange)(newIndex);
+      }
     }
   });
 
-  // Simplified scroll handler without dangerous worklet code
+  // Optimized scroll handler with reduced workload
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
+      'worklet';
       scrollY.value = event.contentOffset.y;
-      isScrolling.value = true;
-      lastScrollTime.value = Date.now();
     },
     onBeginDrag: () => {
+      'worklet';
       isScrolling.value = true;
-      console.log('📱 [Carousel] Scroll started');
     },
     onEndDrag: () => {
-      // Simple end drag - no complex timing logic
+      'worklet';
       isScrolling.value = false;
-      console.log('📱 [Carousel] Scroll ended');
     },
     onMomentumEnd: () => {
+      'worklet';
       isScrolling.value = false;
-      console.log('📱 [Carousel] Momentum ended');
     },
-  });
+  }, []);
 
   // Handle flight booking
   const handleFlightBook = useCallback((flight: Flight) => {
@@ -178,14 +180,14 @@ export const FlightCardCarousel = React.memo(function FlightCardCarousel({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           onScroll={scrollHandler}
-          scrollEventThrottle={32}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           snapToInterval={SCREEN_HEIGHT}
           snapToAlignment="start"
           decelerationRate="fast"
           disableIntervalMomentum={false}
           pagingEnabled={true}
-          removeClippedSubviews={false}
+          removeClippedSubviews={true}
         >
           {flights.map((flight, index) =>
             renderFlightCard({ item: flight, index })

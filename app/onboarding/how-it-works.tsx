@@ -1,20 +1,22 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
-import { DesignSystem } from '@/constants/DesignSystem';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { DesignSystem } from "@/constants/DesignSystem";
+import { router } from "expo-router";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
+const ICON_SIZE = 30;
+const ICON_CONTAINER_SIZE = 54;
 
 export default function HowItWorksScreen() {
   const handleContinue = () => {
-    router.push('/onboarding/welcome');
+    router.push("/onboarding/welcome");
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>
-          Say hello to{'\n'}
-          intelligent travel{'\n'}
-          planning
+          Your own personal{"\n"}
+          travel agent
         </Text>
       </View>
 
@@ -22,52 +24,68 @@ export default function HowItWorksScreen() {
         <View style={styles.features}>
           <View style={styles.feature}>
             <View style={styles.iconContainer}>
-              <IconSymbol name="bubble.left.and.bubble.right" size={24} color={DesignSystem.colors.primary} />
+              <IconSymbol
+                name='bubble.left.and.bubble.right'
+                size={ICON_SIZE}
+                color={DesignSystem.colors.primary}
+              />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Natural conversations</Text>
+              <Text style={styles.featureTitle}>Find flights naturally</Text>
               <Text style={styles.featureDescription}>
-                Speak naturally about your travel plans.{'\n'}
-                "I need to get to NYC next Friday" works perfectly.
+                Say where and when -{"\n"}
+                get the best flight options instantly
               </Text>
             </View>
           </View>
 
           <View style={styles.feature}>
             <View style={styles.iconContainer}>
-              <IconSymbol name="keyboard.badge.ellipsis" size={24} color={DesignSystem.colors.primary} />
+              <IconSymbol
+                name='keyboard.badge.ellipsis'
+                size={ICON_SIZE}
+                color={DesignSystem.colors.primary}
+              />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Voice + text modes</Text>
+              <Text style={styles.featureTitle}>Your instant travel agent</Text>
               <Text style={styles.featureDescription}>
-                Switch seamlessly between talking{'\n'}
-                and typing whenever you prefer.
+                Like calling a travel agent,{"\n"}
+                but available 24/7 instantly
               </Text>
             </View>
           </View>
 
           <View style={styles.feature}>
             <View style={styles.iconContainer}>
-              <IconSymbol name="brain.head.profile" size={24} color={DesignSystem.colors.primary} />
+              <IconSymbol
+                name='brain.head.profile'
+                size={ICON_SIZE}
+                color={DesignSystem.colors.primary}
+              />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Learns your preferences</Text>
+              <Text style={styles.featureTitle}>Knows your preferences</Text>
               <Text style={styles.featureDescription}>
-                Remembers your home airport, airlines,{'\n'}
-                and travel style to save time.
+                Remembers your favorite airlines{"\n"}
+                and preferred seating choices
               </Text>
             </View>
           </View>
 
           <View style={styles.feature}>
             <View style={styles.iconContainer}>
-              <IconSymbol name="lock.shield" size={24} color={DesignSystem.colors.primary} />
+              <IconSymbol
+                name='magnifyingglass.circle'
+                size={ICON_SIZE}
+                color={DesignSystem.colors.primary}
+              />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>You're in control</Text>
+              <Text style={styles.featureTitle}>Always hunting deals</Text>
               <Text style={styles.featureDescription}>
-                Conversations help improve recommendations.{'\n'}
-                You can manage your data anytime.
+                Watches prices 24/7 and alerts{"\n"}
+                you to the best deals
               </Text>
             </View>
           </View>
@@ -77,13 +95,12 @@ export default function HowItWorksScreen() {
       <View style={styles.footer}>
         <View style={styles.disclaimer}>
           <Text style={styles.disclaimerText}>
-            AI suggestions may need verification — always{'\n'}
-            check important details before booking.
+            AI may need verification — check details before booking
           </Text>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.continueButton} 
+
+        <TouchableOpacity
+          style={styles.continueButton}
           onPress={handleContinue}
           activeOpacity={0.8}
         >
@@ -101,36 +118,37 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: DesignSystem.spacing.xl,
-    paddingTop: 80,
-    paddingBottom: DesignSystem.spacing.md,
+    paddingTop: 110,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: "bold",
     color: DesignSystem.colors.textPrimary,
-    textAlign: 'center',
-    lineHeight: 30,
+    textAlign: "center",
+    lineHeight: 34,
     letterSpacing: -0.5,
   },
   content: {
     flex: 1,
     paddingHorizontal: DesignSystem.spacing.xl,
+    justifyContent: "center",
+    marginTop: -40,
   },
   features: {
-    gap: DesignSystem.spacing.lg,
+    gap: DesignSystem.spacing.md + 4,
   },
   feature: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: DesignSystem.spacing.lg,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: ICON_CONTAINER_SIZE,
+    height: ICON_CONTAINER_SIZE,
+    borderRadius: ICON_CONTAINER_SIZE / 2,
     backgroundColor: DesignSystem.colors.primaryBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
   },
   featureContent: {
@@ -138,7 +156,7 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: DesignSystem.colors.textPrimary,
     marginBottom: 2,
   },
@@ -149,32 +167,33 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: DesignSystem.spacing.xl,
-    paddingBottom: 60,
-    paddingTop: DesignSystem.spacing.lg,
+    paddingBottom: 40,
+    paddingTop: 0,
   },
   disclaimer: {
     backgroundColor: DesignSystem.colors.card,
     borderRadius: DesignSystem.borderRadius.medium,
-    padding: DesignSystem.spacing.lg,
+    padding: DesignSystem.spacing.sm,
+    paddingHorizontal: DesignSystem.spacing.md,
     borderWidth: 1,
     borderColor: DesignSystem.colors.inputBorder,
-    marginBottom: DesignSystem.spacing.lg,
+    marginBottom: DesignSystem.spacing.md,
   },
   disclaimerText: {
-    fontSize: 14,
+    fontSize: 13,
     color: DesignSystem.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
+    textAlign: "center",
+    lineHeight: 18,
   },
   continueButton: {
     backgroundColor: DesignSystem.colors.primary,
     paddingVertical: DesignSystem.spacing.lg,
     borderRadius: DesignSystem.borderRadius.medium,
-    alignItems: 'center',
+    alignItems: "center",
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

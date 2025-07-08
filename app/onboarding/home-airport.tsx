@@ -1,28 +1,41 @@
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
-import { useState } from 'react';
-import { router } from 'expo-router';
-import { DesignSystem } from '@/constants/DesignSystem';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { OnboardingHeader } from '@/components/onboarding/OnboardingHeader';
-import { MAJOR_AIRPORTS } from '@/services/mockData/airports';
-import { useOnboarding, useOnboardingActions } from '@/contexts/OnboardingContext';
+import { OnboardingHeader } from "@/components/onboarding/OnboardingHeader";
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { DesignSystem } from "@/constants/DesignSystem";
+import {
+  useOnboarding,
+  useOnboardingActions,
+} from "@/contexts/OnboardingContext";
+import { MAJOR_AIRPORTS } from "@/services/mockData/airports";
+import { router } from "expo-router";
+import { useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function HomeAirportScreen() {
   const { state } = useOnboarding();
   const { setHomeAirport } = useOnboardingActions();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAirport, setSelectedAirport] = useState<string | null>(state.data.homeAirport || null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAirport, setSelectedAirport] = useState<string | null>(
+    state.data.homeAirport || null
+  );
 
-  const filteredAirports = MAJOR_AIRPORTS.filter(airport => 
-    airport.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    airport.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    airport.city.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAirports = MAJOR_AIRPORTS.filter(
+    (airport) =>
+      airport.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      airport.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      airport.city.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 8); // Limit results
 
   const handleNext = () => {
     if (selectedAirport) {
       setHomeAirport(selectedAirport);
-      router.push('/onboarding/travel-style');
+      router.push("/onboarding/travel-style");
     }
   };
 
@@ -41,23 +54,30 @@ export default function HomeAirportScreen() {
 
       <View style={styles.content}>
         <View style={styles.searchContainer}>
-          <IconSymbol name="magnifyingglass" size={20} color={DesignSystem.colors.textSecondary} />
+          <IconSymbol
+            name='magnifyingglass'
+            size={20}
+            color={DesignSystem.colors.textSecondary}
+          />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search airports..."
+            placeholder='Search airports...'
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={DesignSystem.colors.textSecondary}
           />
         </View>
 
-        <ScrollView style={styles.airportList} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.airportList}
+          showsVerticalScrollIndicator={false}
+        >
           {filteredAirports.map((airport) => (
             <TouchableOpacity
               key={airport.code}
               style={[
                 styles.airportItem,
-                selectedAirport === airport.code && styles.airportItemSelected
+                selectedAirport === airport.code && styles.airportItemSelected,
               ]}
               onPress={() => handleSelectAirport(airport.code)}
               activeOpacity={0.7}
@@ -66,15 +86,17 @@ export default function HomeAirportScreen() {
                 <Text style={styles.airportCode}>{airport.code}</Text>
                 <View style={styles.airportDetails}>
                   <Text style={styles.airportName}>{airport.name}</Text>
-                  <Text style={styles.airportCity}>{airport.city}, {airport.country}</Text>
+                  <Text style={styles.airportCity}>
+                    {airport.city}, {airport.country}
+                  </Text>
                 </View>
               </View>
-              
+
               {selectedAirport === airport.code && (
-                <IconSymbol 
-                  name="checkmark.circle.fill" 
-                  size={24} 
-                  color={DesignSystem.colors.primary} 
+                <IconSymbol
+                  name='checkmark.circle.fill'
+                  size={24}
+                  color={DesignSystem.colors.primary}
                 />
               )}
             </TouchableOpacity>
@@ -86,16 +108,18 @@ export default function HomeAirportScreen() {
         <TouchableOpacity
           style={[
             styles.nextButton,
-            !selectedAirport && styles.nextButtonDisabled
+            !selectedAirport && styles.nextButtonDisabled,
           ]}
           onPress={handleNext}
           disabled={!selectedAirport}
           activeOpacity={0.8}
         >
-          <Text style={[
-            styles.nextButtonText,
-            !selectedAirport && styles.nextButtonTextDisabled
-          ]}>
+          <Text
+            style={[
+              styles.nextButtonText,
+              !selectedAirport && styles.nextButtonTextDisabled,
+            ]}
+          >
             Continue
           </Text>
         </TouchableOpacity>
@@ -114,8 +138,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: DesignSystem.spacing.xl,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: DesignSystem.colors.card,
     borderRadius: DesignSystem.borderRadius.medium,
     paddingHorizontal: DesignSystem.spacing.lg,
@@ -134,9 +158,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   airportItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: DesignSystem.spacing.lg,
     paddingHorizontal: DesignSystem.spacing.lg,
     backgroundColor: DesignSystem.colors.card,
@@ -150,14 +174,14 @@ const styles = StyleSheet.create({
     backgroundColor: DesignSystem.colors.primaryBackground,
   },
   airportInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     gap: DesignSystem.spacing.md,
   },
   airportCode: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: DesignSystem.colors.textPrimary,
     minWidth: 45,
   },
@@ -167,7 +191,7 @@ const styles = StyleSheet.create({
   airportName: {
     fontSize: 16,
     color: DesignSystem.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: "500",
     marginBottom: 2,
   },
   airportCity: {
@@ -183,15 +207,15 @@ const styles = StyleSheet.create({
     backgroundColor: DesignSystem.colors.primary,
     paddingVertical: DesignSystem.spacing.lg,
     borderRadius: DesignSystem.borderRadius.medium,
-    alignItems: 'center',
+    alignItems: "center",
   },
   nextButtonDisabled: {
     backgroundColor: DesignSystem.colors.inactive,
   },
   nextButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   nextButtonTextDisabled: {
     color: DesignSystem.colors.textSecondary,

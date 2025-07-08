@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { VideoView, VideoSource } from 'expo-video';
+import { WebView } from 'react-native-webview';
 import { Image } from 'expo-image';
 import Animated, {
   useSharedValue,
@@ -43,7 +44,11 @@ export const FlightCardMedia = React.memo(function FlightCardMedia({
   enableProgressiveLoading = true,
   autoplay = true
 }: FlightCardMediaProps) {
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  // Prioritize video content by finding first video index
+  const firstVideoIndex = media.findIndex(m => m.type === 'video');
+  const initialIndex = firstVideoIndex >= 0 ? firstVideoIndex : 0;
+  
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(initialIndex);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [loadedMedia, setLoadedMedia] = useState(new Set<number>());
@@ -58,19 +63,32 @@ export const FlightCardMedia = React.memo(function FlightCardMedia({
   const currentMedia = media[currentMediaIndex] || media[0];
   // Re-enable video rendering with safety measures
   const isVideo = currentMedia?.type === 'video';
+  const isYouTubeEmbed = currentMedia?.url?.includes('youtube.com/embed/') || false;
   const hasProgressiveUrls = currentMedia?.progressiveUrls && enableProgressiveLoading;
 
-  // Debug logging
+  // Enhanced debug logging
   console.log(`🐛 [FlightCardMedia] Index ${currentMediaIndex}:`, {
     mediaType: currentMedia?.type,
     isVideo,
+    isYouTubeEmbed,
     url: currentMedia?.url,
     hasError,
     shouldRenderVideo,
-    isActive
+    isActive,
+    totalMedia: media.length,
+    mediaTypes: media.map(m => m.type)
   });
 
   // Media cycling removed - images now stay static
+
+  // Reset to first video when media changes
+  useEffect(() => {
+    const firstVideoIndex = media.findIndex(m => m.type === 'video');
+    if (firstVideoIndex >= 0 && firstVideoIndex !== currentMediaIndex) {
+      console.log(`🎬 [Media] Switching to first video at index ${firstVideoIndex}`);
+      setCurrentMediaIndex(firstVideoIndex);
+    }
+  }, [media]);
 
   // Notify parent of media changes
   useEffect(() => {
@@ -211,11 +229,12 @@ export const FlightCardMedia = React.memo(function FlightCardMedia({
     // Immediate fallback to photo if video fails
     const photoMedia = media.find(m => m.type === 'photo');
     if (photoMedia) {
-      console.log('🔄 Falling back to photo:', photoMedia.url);
+      console.log('🔄 Falling back to photo from video error:', photoMedia.url);
       setCurrentMediaIndex(media.indexOf(photoMedia));
       setHasError(false); // Reset error state for photo
     } else {
-      console.warn('⚠️ No photo fallback available - will show placeholder');
+      console.warn('⚠️ No photo fallback available - video will show placeholder');
+      // Keep video index but show placeholder state
     }
   }, [currentMedia, media]);
 
@@ -267,37 +286,114 @@ export const FlightCardMedia = React.memo(function FlightCardMedia({
         });
         
         if (isVideo && !hasError && shouldRenderVideo) {
-          console.log(`✅ [Rendering VideoView] URL: ${currentMedia.url}`);
+          console.log(`✅ [Rendering Video] Type: ${isYouTubeEmbed ? 'YouTube Embed' : 'Direct Video'}, URL: ${currentMedia.url}`);
+          
           try {
-            return (
-              <Animated.View style={[styles.mediaContainer, animatedStyle]}>
-                <VideoView
-                  source={{ uri: currentMedia.url }}
-                  style={styles.video}
-                  shouldPlay={isActive && autoplay}
-                  isLooping={true}
-                  isMuted={true}
-                  allowsFullscreen={false}
-                  contentFit="cover"
-                  onLoad={() => {
-                    console.log(`📹 Video loaded successfully: ${currentMedia.url}`);
-                    handleVideoLoad();
-                  }}
-                  onError={(error) => {
-                    console.error(`❌ Video error: ${currentMedia.url}`, error);
-                    handleVideoError();
-                  }}
-                  onPlaybackStatusUpdate={(status) => {
-                    if (status.error) {
-                      console.error(`❌ Video playback error:`, status.error);
+            if (isYouTubeEmbed) {
+              // Render YouTube embed using WebView for streaming with instant thumbnail
+              return (
+                <Animated.View style={[styles.mediaContainer, animatedStyle]}>
+                  {/* Show thumbnail immediately for instant loading */}
+                  {currentMedia.previewUrl && (
+                    <Image
+                      source={{ uri: currentMedia.previewUrl }}
+                      style={[styles.video, { position: 'absolute', zIndex: isLoading ? 2 : 0 }]}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={200}
+                    />
+                  )}
+                  
+                  {/* YouTube embed loads in background */}
+                  <WebView
+                    source={{ uri: currentMedia.url }}
+                    style={[styles.video, { opacity: isLoading ? 0 : 1 }]}
+                    allowsInlineMediaPlayback={true}
+                    mediaPlaybackRequiresUserAction={false}
+                    javaScriptEnabled={true}
+                    domStorageEnabled={true}
+                    startInLoadingState={false}
+                    scrollEnabled={false}
+                    bounces={false}
+                    onLoadStart={() => {
+                      console.log(`🎬 YouTube embed loading: ${currentMedia.url}`);
+                      setIsLoading(true);
+                    }}
+                    onLoad={() => {
+                      console.log(`📹 YouTube embed loaded successfully: ${currentMedia.url}`);
+                      setIsLoading(false);
+                      handleVideoLoad();
+                    }}
+                    onError={(error) => {
+                      console.error(`❌ YouTube embed error: ${currentMedia.url}`, error);
+                      setIsLoading(false);
                       handleVideoError();
-                    }
-                  }}
-                />
-              </Animated.View>
-            );
+                    }}
+                    // Optimized JavaScript for faster loading
+                    injectedJavaScript={`
+                      // Optimize YouTube embed for mobile performance
+                      window.addEventListener('load', function() {
+                        const iframe = document.querySelector('iframe');
+                        if (iframe) {
+                          iframe.style.border = 'none';
+                          iframe.style.borderRadius = '0px';
+                          iframe.style.pointerEvents = 'auto';
+                        }
+                        
+                        // Force video to be ready for interaction
+                        setTimeout(() => {
+                          window.postMessage('video-ready');
+                        }, 500);
+                      });
+                      true;
+                    `}
+                    // Reduce loading time with optimized settings
+                    cacheEnabled={true}
+                    incognito={false}
+                    cacheMode="LOAD_CACHE_ELSE_NETWORK"
+                  />
+                  
+                  {/* Loading indicator overlay */}
+                  {isLoading && (
+                    <View style={styles.loadingOverlay}>
+                      <ActivityIndicator size="small" color="white" />
+                      <Text style={styles.loadingText}>Loading video...</Text>
+                    </View>
+                  )}
+                </Animated.View>
+              );
+            } else {
+              // Render direct video files using VideoView
+              return (
+                <Animated.View style={[styles.mediaContainer, animatedStyle]}>
+                  <VideoView
+                    source={{ uri: currentMedia.url }}
+                    style={styles.video}
+                    shouldPlay={isActive && autoplay}
+                    isLooping={true}
+                    isMuted={true}
+                    allowsFullscreen={false}
+                    contentFit="cover"
+                    onLoad={() => {
+                      console.log(`📹 Video loaded successfully: ${currentMedia.url}`);
+                      handleVideoLoad();
+                    }}
+                    onError={(error) => {
+                      console.error(`❌ Video error: ${currentMedia.url}`, error);
+                      handleVideoError();
+                    }}
+                    onPlaybackStatusUpdate={(status) => {
+                      if (status.error) {
+                        console.error(`❌ Video playback error:`, status.error);
+                        handleVideoError();
+                      }
+                    }}
+                  />
+                </Animated.View>
+              );
+            }
           } catch (error) {
-            console.error(`💥 VideoView render error:`, error);
+            console.error(`💥 Video render error:`, error);
             handleVideoError();
             return null;
           }
@@ -485,6 +581,23 @@ const styles = StyleSheet.create({
   videoPlaceholderText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '500',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 12,
     fontWeight: '500',
   },
 });

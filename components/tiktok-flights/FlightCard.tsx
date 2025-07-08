@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,7 @@ interface FlightCardProps {
   onDetailsPress: (flight: Flight) => void;
 }
 
-export const FlightCard = React.memo(function FlightCard({
+const FlightCard = React.memo(function FlightCard({
   flight,
   index,
   isActive,
@@ -44,9 +44,19 @@ export const FlightCard = React.memo(function FlightCard({
   const [destinationMedia, setDestinationMedia] = useState<DestinationMedia[]>([]);
   const [isLoadingMedia, setIsLoadingMedia] = useState(true);
   
-  const departureSegment = flight.segments[0];
-  const lastSegment = flight.segments[flight.segments.length - 1];
-  const destinationAirport = lastSegment.arrival.airport;
+  // Safe segment access with fallbacks
+  const departureSegment = flight.segments?.[0];
+  const lastSegment = flight.segments?.[flight.segments.length - 1];
+  const destinationAirport = lastSegment?.arrival?.airport;
+
+  // Early return if flight data is incomplete
+  if (!departureSegment || !lastSegment || !destinationAirport) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Flight data unavailable</Text>
+      </View>
+    );
+  }
   
   // Animation values
   const contentOpacity = useSharedValue(0);
@@ -55,33 +65,30 @@ export const FlightCard = React.memo(function FlightCard({
   const routeOpacity = useSharedValue(0);
   const buttonScale = useSharedValue(0.9);
 
-  // Enhanced media loading with context and optimization
+  // Optimized media loading with lazy loading for inactive cards
   useEffect(() => {
+    if (!isActive) return; // Only load media for active cards
+    
     const loadMedia = async () => {
       try {
         setIsLoadingMedia(true);
-        
-        // Determine time-based context for better media selection
-        const currentHour = new Date().getHours();
-        let timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
-        if (currentHour >= 5 && currentHour < 12) timeOfDay = 'morning';
-        else if (currentHour >= 12 && currentHour < 17) timeOfDay = 'afternoon';
-        else if (currentHour >= 17 && currentHour < 21) timeOfDay = 'evening';
-        else timeOfDay = 'night';
         
         // Get contextual media with optimization
         const media = await mediaService.getDestinationMedia(
           destinationAirport.code,
           destinationAirport.city,
           {
-            timeOfDay,
             includeVideos: true,
-            limit: 5,
-            preload: isActive // Preload only for active cards
+            limit: 1, // Only request 1 video
+            preload: false // Disable preload to prevent infinite loops
           }
         );
         
-        setDestinationMedia(media);
+        // Filter out any media items without valid URLs (strings or numbers for local assets)
+        const validMedia = media.filter(m => m.url && (typeof m.url === 'string' || typeof m.url === 'number'));
+        console.log(`✅ Loaded ${validMedia.length} media items for ${destinationAirport.city}`);
+        
+        setDestinationMedia(validMedia);
       } catch (error) {
         console.error('Failed to load destination media:', error);
         setDestinationMedia([]);
@@ -92,6 +99,11 @@ export const FlightCard = React.memo(function FlightCard({
 
     loadMedia();
   }, [destinationAirport.code, destinationAirport.city, isActive]);
+
+  // Return null for invisible cards to improve performance
+  if (Math.abs(index * SCREEN_HEIGHT - scrollY.value) > SCREEN_HEIGHT * 2) {
+    return <View style={styles.container} />;
+  }
 
   // Animate in content when card becomes active
   useEffect(() => {
@@ -110,21 +122,43 @@ export const FlightCard = React.memo(function FlightCard({
     }
   }, [isActive]);
 
-  // Format time helper
-  const formatTime = (date: Date) => {
+  // Helper functions for time formatting
+  const formatTime = useCallback((time: Date | string | undefined) => {
+    if (!time) return '--:--';
+    const date = time instanceof Date ? time : new Date(time);
+    if (isNaN(date.getTime())) return '--:--';
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
     });
-  };
+  }, []);
 
-  // Format duration helper
-  const formatDuration = (minutes: number) => {
+  const formatDuration = useCallback((minutes: number) => {
+    if (!minutes || minutes <= 0) return '--h --m';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
-  };
+  }, []);
+
+  // Memoized flight data calculations
+  const flightData = useMemo(() => {
+    return {
+      departureTime: formatTime(departureSegment?.departure?.scheduledTime),
+      arrivalTime: formatTime(lastSegment?.arrival?.scheduledTime),
+      duration: formatDuration(flight.totalDuration),
+      stops: flight.segments?.length > 1 ? `${flight.segments.length - 1} stop${flight.segments.length > 2 ? 's' : ''}` : 'Nonstop'
+    };
+  }, [departureSegment, lastSegment, flight.totalDuration, flight.segments.length, formatTime, formatDuration]);
+
+  // Memoized handlers
+  const handleBookPress = useCallback(() => {
+    onBookPress(flight);
+  }, [flight, onBookPress]);
+
+  const handleDetailsPress = useCallback(() => {
+    onDetailsPress(flight);
+  }, [flight, onDetailsPress]);
 
   // Animated styles
   const contentAnimatedStyle = useAnimatedStyle(() => ({
@@ -246,14 +280,14 @@ export const FlightCard = React.memo(function FlightCard({
           <Animated.View style={[styles.routeSection, routeAnimatedStyle]}>
             <View style={styles.routeInfo}>
               <View style={styles.timeBlock}>
-                <Text style={styles.time}>{formatTime(departureSegment.departure.time)}</Text>
+                <Text style={styles.time}>{flightData.departureTime}</Text>
                 <Text style={styles.airport}>{departureSegment.departure.airport.code}</Text>
               </View>
 
               <View style={styles.flightPath}>
                 <View style={styles.pathLine} />
                 <View style={styles.flightDetails}>
-                  <Text style={styles.duration}>{formatDuration(flight.totalDuration)}</Text>
+                  <Text style={styles.duration}>{flightData.duration}</Text>
                   {flight.stops > 0 && (
                     <Text style={styles.stops}>
                       {flight.stops} stop{flight.stops > 1 ? 's' : ''}
@@ -264,7 +298,7 @@ export const FlightCard = React.memo(function FlightCard({
               </View>
 
               <View style={styles.timeBlock}>
-                <Text style={styles.time}>{formatTime(lastSegment.arrival.time)}</Text>
+                <Text style={styles.time}>{flightData.arrivalTime}</Text>
                 <Text style={styles.airport}>{lastSegment.arrival.airport.code}</Text>
               </View>
             </View>
@@ -578,4 +612,14 @@ const styles = StyleSheet.create({
     color: '#FF6B35',
     fontWeight: '600',
   },
+  errorText: {
+    fontSize: 16,
+    color: 'white',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: SCREEN_HEIGHT / 2 - 50,
+  },
 });
+
+// Enhanced memoization with proper comparison function
+export { FlightCard };

@@ -25,28 +25,7 @@ interface DestinationMedia {
   };
 }
 
-interface UnsplashPhoto {
-  id: string;
-  urls: {
-    raw: string;
-    full: string;
-    regular: string;
-    small: string;
-    thumb: string;
-  };
-  user: {
-    name: string;
-    username: string;
-  };
-  description: string | null;
-  alt_description: string | null;
-  width: number;
-  height: number;
-  color: string;
-  tags?: {
-    title: string;
-  }[];
-}
+// Removed UnsplashPhoto interface - no longer needed
 
 interface CoverrVideo {
   id: number;
@@ -58,9 +37,7 @@ interface CoverrVideo {
 }
 
 class MediaService {
-  private unsplashAccessKey = process.env.EXPO_PUBLIC_UNSPLASH_ACCESS_KEY || 'demo';
-  private baseUnsplashUrl = 'https://api.unsplash.com';
-  private hasLoggedUnsplashInfo = false;
+  // Removed Unsplash API - using local photos only
   private baseCoverrUrl = 'https://api.coverr.co/v1';
   private isInitialized = false;
   private mediaCache = new Map<string, DestinationMedia[]>();
@@ -90,6 +67,25 @@ class MediaService {
     require('@/assets/images/unsplash-images/joshua-fuller-BUdgiO5dqFA-unsplash.jpg'),
     require('@/assets/images/unsplash-images/killian-pham-j0DrLBZH0nE-unsplash.jpg'),
     require('@/assets/images/unsplash-images/lachlan-gowen-KYjQBkYiRuw-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/lachlan-gowen-QzQM5Sp3fK4-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/leio-mclaren-FwdZYz0yc9g-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/liam-burnett-blue-cnRgYes6tNE-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/lisha-riabinina--LhLmNx9fTI-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/luise-and-nic-0YPKiXTo5oU-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/lysander-yuen-OXiTVXCm9NI-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/mauro-lima-AETgluJGwVI-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/mauro-lima-R1P7yzcuDJE-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/mauro-lima-gcoNY81O09g-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/moritz-mentges-jt6eW1k0rTY-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/nick-martin-6wD4qUp2Fj0-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/nick-martin-JYdvvB_Qy7Y-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/redd-francisco-Bxzrd0p6yOM-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/silas-baisch-P8oqPW32fm0-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/stijn-te-strake-m45uW4f9YQg-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/tom-barrett-M0AWNxnLaMw-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/tom-morbey-Jq9an0WVWfk-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/xiyuan-du-MIYUHApQy7s-unsplash.jpg'),
+    require('@/assets/images/unsplash-images/yang-Q-jx_Bwdgk8-unsplash.jpg'),
   ];
 
   /**
@@ -107,7 +103,7 @@ class MediaService {
       preload?: boolean;
     }
   ): Promise<DestinationMedia[]> {
-    const cacheKey = `${airportCode}-${JSON.stringify(options || {})}`;
+    const cacheKey = `${airportCode}-${cityName || ''}-${JSON.stringify(options || {})}`;
     
     // Check cache first
     if (this.mediaCache.has(cacheKey)) {
@@ -154,9 +150,19 @@ class MediaService {
       await this.addFallbackMedia(media, airportCode, cityName, limit, includeVideos, options);
     }
 
-    // Ensure we have at least some media
+    // Ensure we have at least some media - prioritize local photos when APIs fail
     if (media.length === 0) {
-      media.push(await this.getDefaultMedia(airportCode));
+      console.log('📸 No media found, using local photos as primary content');
+      const localPhotos = await this.getLocalPhotos(airportCode);
+      media.push(...localPhotos.slice(0, limit));
+    }
+    
+    // Ensure there's always at least one photo for video fallbacks
+    const hasPhoto = media.some(m => m.type === 'photo');
+    if (!hasPhoto) {
+      console.log('📸 Adding photo fallback for video errors');
+      const localPhotos = await this.getLocalPhotos(airportCode);
+      media.push(...localPhotos.slice(0, 1));
     }
 
     // Cache the result
@@ -171,60 +177,7 @@ class MediaService {
     return finalMedia;
   }
 
-  /**
-   * Enhanced Unsplash integration with optimization and quality scoring
-   */
-  private async getUnsplashPhotos(query: string, options?: {
-    orientation?: 'portrait' | 'landscape' | 'squarish';
-    perPage?: number;
-    quality?: 'high' | 'medium' | 'low';
-  }): Promise<DestinationMedia[]> {
-    const orientation = options?.orientation || 'portrait';
-    const perPage = options?.perPage || 3;
-    const quality = options?.quality || 'high';
-
-    const response = await fetch(
-      `${this.baseUnsplashUrl}/search/photos?query=${encodeURIComponent(query + ' travel destination')}&per_page=${perPage}&orientation=${orientation}&order_by=relevance`,
-      {
-        headers: {
-          'Authorization': `Client-ID ${this.unsplashAccessKey}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Unsplash API request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const photos: UnsplashPhoto[] = data.results || [];
-
-    const destinationMedia: DestinationMedia[] = [];
-
-    for (const photo of photos) {
-      // Get optimized URL from cache
-      const optimizedUrl = await imageCache.getOptimizedImage(photo.urls.regular, quality);
-      const progressiveUrls = imageCache.getProgressiveUrls(photo.urls.regular);
-
-      // Calculate quality score based on Unsplash metrics
-      const qualityScore = this.calculateUnsplashQualityScore(photo);
-
-      destinationMedia.push({
-        id: `unsplash-${photo.id}`,
-        type: 'photo',
-        url: optimizedUrl,
-        previewUrl: photo.urls.small,
-        credit: `Photo by ${photo.user.name} on Unsplash`,
-        description: photo.description || photo.alt_description || 'Beautiful destination',
-        quality: qualityScore,
-        tags: photo.tags?.map(tag => tag.title) || [],
-        isOptimized: true,
-        progressiveUrls
-      });
-    }
-
-    return destinationMedia;
-  }
+  // Removed Unsplash API integration - using local photos only
 
   /**
    * Enhanced Coverr integration with video optimization
@@ -278,7 +231,7 @@ class MediaService {
    */
   private async getLocalPhotos(airportCode: string): Promise<DestinationMedia[]> {
     const destinationMedia: DestinationMedia[] = [];
-    const numPhotos = 3; // Get 3 random photos for each destination
+    const numPhotos = 5; // Get 5 random photos for each destination
     
     // Shuffle photos array and take the first numPhotos
     const shuffledPhotos = [...this.allTravelPhotos].sort(() => Math.random() - 0.5);
@@ -305,7 +258,7 @@ class MediaService {
   }
 
   /**
-   * Get enhanced Pexels videos with intelligent city matching
+   * Get streaming videos using YouTube as primary, Pexels as fallback
    */
   private async getLocalVideoAssets(
     query: string, 
@@ -317,9 +270,44 @@ class MediaService {
       season?: string;
     }
   ): Promise<DestinationMedia[]> {
-    const { pexelsVideoService } = await import('./PexelsVideoService');
-    
+    // Try YouTube first for instant streaming
     try {
+      const { youTubeVideoService } = await import('./YouTubeVideoService');
+      
+      console.log(`🎬 Trying YouTube for ${query} (${airportCode})`);
+      const youtubeVideos = await youTubeVideoService.getDestinationVideos(
+        airportCode || query.toUpperCase(),
+        query,
+        {
+          maxResults: limit,
+          duration: 'short',
+          quality: 'high'
+        }
+      );
+
+      if (youtubeVideos.length > 0) {
+        console.log(`✅ YouTube success: ${youtubeVideos.length} streaming video(s) for ${query}`);
+        return youtubeVideos.map(video => ({
+          id: video.id,
+          type: 'video' as const,
+          url: video.url, // YouTube embed URL for streaming
+          previewUrl: video.previewUrl,
+          credit: video.credit,
+          description: video.description,
+          quality: video.quality,
+          tags: video.tags,
+          isOptimized: video.isOptimized
+        }));
+      }
+    } catch (error) {
+      console.warn('YouTube video loading failed, trying Pexels fallback:', error);
+    }
+
+    // Fallback to Pexels if YouTube fails
+    try {
+      const { pexelsVideoService } = await import('./PexelsVideoService');
+      
+      console.log(`🎬 Fallback to Pexels for ${query}`);
       const enhancedVideos = await pexelsVideoService.getDestinationVideos(
         airportCode || query.toUpperCase(),
         query,
@@ -334,6 +322,10 @@ class MediaService {
         }
       );
 
+      if (enhancedVideos.length > 0) {
+        console.log(`✅ Pexels fallback success: ${enhancedVideos.length} video(s) for ${query}`);
+      }
+
       return enhancedVideos.map(video => ({
         id: video.id,
         type: 'video' as const,
@@ -346,7 +338,7 @@ class MediaService {
         isOptimized: video.isOptimized
       }));
     } catch (error) {
-      console.warn('Enhanced Pexels video loading failed:', error);
+      console.warn('All video sources failed:', error);
       return [];
     }
   }
@@ -519,7 +511,7 @@ class MediaService {
     try {
       // For explore feed: Prioritize videos first, then photos as fallback
       
-      // First, try to get videos if requested
+      // First, try to get videos if requested - prioritize videos for TikTok experience
       if (includeVideos && needed > 0) {
         try {
           const videoQuery = cityName || airportCode;
@@ -530,14 +522,15 @@ class MediaService {
           };
           const videos = await this.getLocalVideoAssets(
             videoQuery, 
-            Math.min(needed, 3), // Limit videos to 3 max
+            1, // Only get 1 video to prevent multiple requests
             airportCode,
             videoContextOptions
           );
           media.push(...videos);
-          console.log(`✅ Added ${videos.length} videos for ${airportCode}`);
+          console.log(`✅ Added ${videos.length} videos for ${airportCode}`, videos.map(v => v.url));
         } catch (error) {
           console.warn('Enhanced video loading failed:', error);
+          // Don't add hardcoded videos - let it fallback to photos instead
         }
       }
 
@@ -550,21 +543,13 @@ class MediaService {
         media.push(...localPhotos.slice(0, localPhotosNeeded));
         console.log(`✅ Added ${localPhotosNeeded} local photos for ${airportCode}`);
         
-        // Then try Unsplash if we still need more and have API key
+        // Fill any remaining slots with more local photos if needed
         const stillRemaining = limit - media.length;
-        if (stillRemaining > 0 && this.unsplashAccessKey && this.unsplashAccessKey !== 'demo') {
-          try {
-            const photos = await this.getUnsplashPhotos(cityName || airportCode, {
-              perPage: Math.min(stillRemaining, 2)
-            });
-            media.push(...photos);
-            console.log(`✅ Added ${photos.length} Unsplash photos for ${airportCode}`);
-          } catch (unsplashError) {
-            console.warn('Unsplash photos failed, using local photos only:', unsplashError);
-          }
-        } else if (!this.hasLoggedUnsplashInfo && this.unsplashAccessKey === 'demo') {
-          console.log('ℹ️ Using local photos. Add EXPO_PUBLIC_UNSPLASH_ACCESS_KEY to .env for additional destination photos');
-          this.hasLoggedUnsplashInfo = true;
+        if (stillRemaining > 0) {
+          const additionalLocalPhotos = await this.getLocalPhotos(airportCode);
+          const additionalNeeded = Math.min(stillRemaining, additionalLocalPhotos.length);
+          media.push(...additionalLocalPhotos.slice(localPhotosNeeded, localPhotosNeeded + additionalNeeded));
+          console.log(`✅ Added ${additionalNeeded} additional local photos for ${airportCode}`);
         }
       }
     } catch (error) {
@@ -592,11 +577,14 @@ class MediaService {
         await imageCache.preloadImages(photoUrls, 'high');
       }
 
-      // Skip video preloading for now to prevent crashes
-      // TODO: Re-enable when video optimization is stable
-      // if (videoUrls.length > 0) {
-      //   await videoOptimizer.preloadVideos(videoUrls, 'medium');
-      // }
+      // Safe video preloading with crash prevention
+      if (videoUrls.length > 0) {
+        try {
+          await videoOptimizer.preloadVideos(videoUrls.slice(0, 2), 'low'); // Limit to 2 videos with low quality
+        } catch (videoError) {
+          console.warn('Video preloading failed, continuing without video cache:', videoError);
+        }
+      }
     } catch (error) {
       console.warn('Media preloading failed:', error);
     } finally {
@@ -604,25 +592,7 @@ class MediaService {
     }
   }
 
-  private calculateUnsplashQualityScore(photo: UnsplashPhoto): number {
-    let score = 50; // Base score
-    
-    // Dimension scoring (prefer portrait for TikTok)
-    const aspectRatio = photo.height / photo.width;
-    if (aspectRatio >= 1.3 && aspectRatio <= 1.8) score += 20;
-    else if (aspectRatio >= 1.0) score += 10;
-    
-    // Tag relevance
-    if (photo.tags && photo.tags.length > 0) {
-      score += Math.min(photo.tags.length * 2, 10);
-    }
-    
-    // Description quality
-    if (photo.description && photo.description.length > 30) score += 10;
-    if (photo.alt_description && photo.alt_description.length > 20) score += 5;
-    
-    return Math.min(100, score);
-  }
+  // Removed calculateUnsplashQualityScore - no longer needed
 }
 
 export const mediaService = new MediaService();
